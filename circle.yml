@@ -1,0 +1,35 @@
+machine:
+  timezone:
+    Australia/Sydney
+
+  node:
+    version: 6.3.1
+
+  environment:
+    NODE_ENV: 'production'
+
+general:
+  branches:
+    only:
+      - master
+      - development
+
+dependencies:
+  override:
+    - npm install --only=dev
+    - npm install
+    - ./node_modules/.bin/gulp deploy
+
+test:
+  override:
+    - echo 1
+
+deployment:
+  staging:
+    branch: development
+    commands:
+      - aws s3 sync dist/skygrid-latest* s3://cdn.staging.skygrid.io/sdk/js/
+  production:
+    branch: master
+    commands:
+      - aws s3 sync dist/ s3://cdn.skygrid.io/sdk/js/
