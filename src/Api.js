@@ -6,7 +6,7 @@ import EventEmitter from './EventEmitter';
  * @private
  */
 export default class Api {
-	constructor(url) {
+	constructor() {
 		this.emitter = new EventEmitter();
 		this.current = null;
 	}
