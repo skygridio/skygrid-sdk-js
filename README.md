@@ -2,7 +2,9 @@
 
 The SDK itself makes heavy use of ES6 Promises.  As a result of this to enable support in some browsers requires a polyfill,
 
-## Interacting with devices
+## Usage
+
+### Interacting with devices
 
 The Device object allows us to fetch the current state of the device from the SkyGrid backend, to update the state of the device, and subscribe to changes to that device.
 

@@ -1,8 +1,28 @@
 {
   "name": "skygrid",
-  "version": "1.0.0",
-  "description": "The SkyGrid Javascript SDK",
-  "main": "src/SkyGrid.js",
+  "version": "0.1.0",
+  "description": "The SkyGrid JavaScript SDK",
+  "main": "lib/SkyGrid.js",
+  "scripts": {
+    "docs": "node_modules/.bin/esdoc -c esdoc.json",
+    "prepublish": "node_modules/.bin/gulp compile"
+  },
+  "author": "SkyGrid <hello@skygrid.io>",
+  "homepage": "https://skygrid.io",
+  "license": "MIT",
+  "keywords": [
+    "skygrid",
+    "iot",
+    "connectivity",
+    "sigfox"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/skygridio/skygrid-sdk-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/skygridio/skygrid-sdk-js/issues"
+  },
   "dependencies": {
     "socket.io-client": "^1.4.8"
   },
@@ -12,17 +32,10 @@
     "esdoc": "^0.4.8",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
-    "gulp-changed": "^1.3.0",
     "gulp-rename": "^1.2.2",
     "gulp-rimraf": "^0.2.0",
     "gulp-sourcemaps": "^1.6.0",
     "gulp-uglify": "^2.0.0",
     "vinyl-source-stream": "^1.1.0"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "docs": "node_modules/.bin/esdoc -c esdoc.json"
-  },
-  "author": "SkyGrid",
-  "license": "ISC"
+  }
 }
