@@ -1,5 +1,15 @@
 ## Prerequisites
 
+NPM:
+```
+npm install --save skygrid
+```
+
+CDN:
+```
+https://cdn.skygrid.io/sdk/js/skygrid-latest.min.js
+```
+
 The SDK itself makes heavy use of ES6 Promises.  As a result of this to enable support in some browsers requires a polyfill,
 
 ## Usage
