@@ -19,11 +19,13 @@ The SDK itself makes heavy use of ES6 Promises.  As a result of this to enable s
 The Device object allows us to fetch the current state of the device from the SkyGrid backend, to update the state of the device, and subscribe to changes to that device.
 
 ```javascript
+var skygrid = require('skygrid');
+
 // Get a Project object that lets us interact with a SkyGrid project.
-const project = SkyGrid.project('94hfg93');
+var project = skygrid.project('94hfg93');
 
 // Gets a Device object that lets us interact with a device.
-const device = project.device('mjd93ngk');
+var device = project.device('mjd93ngk');
 ```
 
 ### Fetching data
