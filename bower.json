@@ -1,9 +1,9 @@
 {
   "name": "skygrid",
   "description": "The SkyGrid JavaScript SDK",
-  "main": "dist/skygrid.min.js",
+  "main": "dist/skygrid.js",
   "authors": [
-    "SkyGrid <hello@skygrid.io>"
+    "SkyGrid <hey@skygrid.io>"
   ],
   "license": "MIT",
   "keywords": [
@@ -17,7 +17,7 @@
   "homepage": "https://skygrid.io",
   "ignore": [
     "*",
-    "!dist/skygrid.min.js",
+    "!dist/*",
     "!LICENSE"
   ]
 }

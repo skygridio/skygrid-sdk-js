@@ -7,7 +7,7 @@
     "docs": "node_modules/.bin/esdoc -c esdoc.json",
     "prepublish": "node_modules/.bin/gulp compile"
   },
-  "author": "SkyGrid <hello@skygrid.io>",
+  "author": "SkyGrid <hey@skygrid.io>",
   "homepage": "https://skygrid.io",
   "license": "MIT",
   "keywords": [
