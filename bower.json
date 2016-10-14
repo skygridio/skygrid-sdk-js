@@ -1,0 +1,23 @@
+{
+  "name": "skygrid",
+  "description": "The SkyGrid JavaScript SDK",
+  "main": "dist/skygrid.min.js",
+  "authors": [
+    "SkyGrid <hello@skygrid.io>"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "skygrid",
+    "iot",
+    "internet of things",
+    "connectivity",
+    "sigfox",
+    "lora"
+  ],
+  "homepage": "https://skygrid.io",
+  "ignore": [
+    "*",
+    "!dist/skygrid.min.js",
+    "!LICENSE"
+  ]
+}

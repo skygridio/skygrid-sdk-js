@@ -13,8 +13,10 @@
   "keywords": [
     "skygrid",
     "iot",
+    "internet of things",
     "connectivity",
-    "sigfox"
+    "sigfox",
+    "lora"
   ],
   "repository": {
     "type": "git",
