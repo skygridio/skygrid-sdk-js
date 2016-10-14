@@ -1,8 +1,16 @@
-## Prerequisites
+#SkyGrid
+An API for the physical world
+
+## Installation
 
 NPM:
 ```
 npm install --save skygrid
+```
+
+Bower:
+```
+bower install --save skygrid
 ```
 
 CDN:

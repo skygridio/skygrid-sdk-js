@@ -25,12 +25,12 @@ gulp.task('browserify', ['compile'], function() {
 	})
 	.bundle();
 
-	return stream.pipe(source('skygrid-latest.js'))
+	return stream.pipe(source('skygrid.js'))
 		.pipe(gulp.dest('./dist'));
 });
 
 gulp.task('minify', ['browserify'], function() {
-	return gulp.src('dist/skygrid-latest.js')
+	return gulp.src('dist/skygrid.js')
 	  .pipe(uglify())
 	  .pipe(rename({ extname: '.min.js' }))
 	  .pipe(gulp.dest('./dist'));
