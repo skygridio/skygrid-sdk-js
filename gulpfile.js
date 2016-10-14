@@ -14,13 +14,13 @@ gulp.task('clean', function() {
 gulp.task('compile', ['clean'], function() {
 	return gulp.src('src/*.js')
 		.pipe(sourcemaps.init())
-		.pipe(babel({presets: ['es2015']}))
+		.pipe(babel({ presets: ['es2015'] }))
 		.pipe(sourcemaps.write())
 		.pipe(gulp.dest('./lib'));
 });
 
 gulp.task('browserify', ['compile'], function() {
-	var stream = browserify({
+	const stream = browserify({
 		entries: 'lib/Browser.js',
 	})
 	.bundle();
@@ -31,9 +31,9 @@ gulp.task('browserify', ['compile'], function() {
 
 gulp.task('minify', ['browserify'], function() {
 	return gulp.src('dist/skygrid.js')
-	  .pipe(uglify())
-	  .pipe(rename({ extname: '.min.js' }))
-	  .pipe(gulp.dest('./dist'));
+		.pipe(uglify())
+		.pipe(rename({ extname: '.min.js' }))
+		.pipe(gulp.dest('./dist'));
 });
 
 gulp.task('browser', ['browserify']);

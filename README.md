@@ -1,5 +1,5 @@
 #SkyGrid
-An API for the physical world
+An API for the physical world.
 
 ## Installation
 
@@ -73,4 +73,19 @@ device.set('speed', 10);
 device.get('speed'); // 10
 device.discardChanges();
 device.get('speed'); // 100
+```
+### Subscribing to changes
+
+Subscribing to a device allows us to receive changes in real time as they are received by the SkyGrid backend.  Once subscribe() is called on a device, that particular instance of the device is kept up to date.
+```javascript
+device.subscribe();
+```
+
+We can also pass a function to subscribe() that will get called every time an event is received.
+```javascript
+device.subscribe((device, changes) => {
+	changes.map(change => {
+		console.log(change + ': ' + device.get(change));
+	});
+});
 ```
