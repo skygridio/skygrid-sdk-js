@@ -50,12 +50,14 @@ There is also the fetchIfNeeded() method, which fetches data from the server if 
 
 ### Setting data
 
-Device properties be set with the set() method, and retrieved with the get() method.  Any change on a device object is not pushed to the backend until the save() method is called.  
+Device properties can be set with the set() method, and retrieved with the get() method.  Any change made to a device instance is not pushed to the backend until the save() method is called.  
 
 ```javascript
 device.set('speed', 100);
 device.set('distance', 10);
-device.save();
+device.save().then(device => {
+	// Successfully saved
+});
 ```
 You can also directly set properties in the save method:
 ```javascript
@@ -65,9 +67,9 @@ device.save({
 });
 ```
 
-Note that internally, all device changes are stored as a changeset until they are pushed to the server.  When accessing the Device object locally, the changes will be returned when querying properties.  Changes can also be discarded any time before save() is called.
+Note that internally, all device changes are stored as a changeset until they are pushed to the server.  When accessing the Device instance locally, the changes will be returned when querying properties.  Changes can also be discarded any time before save() is called.
 ```javascript
-const device = project.device('9fh9hfws');
+var device = project.device('9fh9hfws');
 device.get('speed'); // 100
 device.set('speed', 10);
 device.get('speed'); // 10
@@ -83,9 +85,33 @@ device.subscribe();
 
 We can also pass a function to subscribe() that will get called every time an event is received.
 ```javascript
-device.subscribe((device, changes) => {
+function logChanges(device, changes) {
+	changes.map(function(change) {
+		console.log(change + ': ' + device.get(change));
+	});
+}
+
+device.subscribe(logChanges);
+```
+```javascript
+var subId = device.subscribe((device, changes) => {
 	changes.map(change => {
 		console.log(change + ': ' + device.get(change));
 	});
 });
+```
+
+### Removing subscriptions
+
+You can use the unique subscription ID returned by subscribe() to remove a subscription, or you can remove all subscriptions at once.
+
+```javascript
+// Remove by function
+device.unsubscribe(logChanges);
+
+// Remove by subscription ID
+device.unsubscribe(subId);
+
+// Remove all
+device.unsubscribe();
 ```
