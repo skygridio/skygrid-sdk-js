@@ -24,6 +24,7 @@
     "space-in-brackets": 0,
     "space-infix-ops": 2,
     "valid-jsdoc": 2,
+    "indentSwitchCase": true,
 
     "semi": ["error", "always"],
 

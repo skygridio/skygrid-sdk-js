@@ -18,7 +18,10 @@ export default class Device {
 		}
 
 		this._api = api.api;
-		this._subscriptionManager = api.subscriptionManager;
+		this._subManager = api.subscriptionManager;
+		this._subCallbacks = {};
+		this._subCount = 0;
+		this._subId = null;
 
 		this._changes = { properties: {} };
 		this._fetched = false;
@@ -118,11 +121,11 @@ export default class Device {
 	}
 
 	/**
-	 * Gets a value deteremining whether this class is complete (has been fetched from the server).
+	 * Gets a value deteremining whether this device is complete (has been fetched from the server).
 	 * @returns {boolean} true if the device is complete, otherwise false.
 	 */
 	get isComplete() {
-		return this._fetched !== true;
+		return this._fetched === true;
 	}
 
 	/**
@@ -382,7 +385,10 @@ export default class Device {
 	 * NOTE: Subscribing is currently only available when using the websocket communication method.
 	 * 
 	 * @param  {Function} [callback] Optional callback that is raised when an update is received.
-	 * @returns {void}
+	 * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
+	 *
+	 * @example
+	 * device.subscribe();
 	 *
 	 * @example
 	 * device.subscribe((device, changes) => {
@@ -399,15 +405,59 @@ export default class Device {
 	 * device.subscribe(printChanges);
 	 */
 	subscribe(callback) {
-		this._subscriptionManager.addSubscription({
-			deviceId: this.id
-		}, 
-		(device, changes) => {
-			this._data = device._data;
-			this._fetched = true;
+		return Promise.resolve().then(() => {
+			if (this._subId === null) {
+				return this._subManager.addSubscription({
+					deviceId: this.id
+				}, 
+				(changes, device) => {
+					this._data = device._data;
+					this._fetched = true;
 
-			if (callback) {
-				callback(this, changes);
+					for (let key in this._subCallbacks) {
+						const callback = this._subCallbacks[key];
+						callback(changes, this);
+					}
+				}).then(id => {
+					this._subId = id;
+				});
+			}
+		}).then(() => {
+			const id = this._subCount++;
+			this._subCallbacks[id] = callback;
+			return id;
+		});
+	}
+
+	/**
+	 * Unsubscribes the specified ID or callback from this device.
+	 * If no ID or callback is specified, all subscriptions are removed.
+	 * @param  {Number|Function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
+	 * @return {Promise} A promise that resolves once the subscription has been removed.
+	 */
+	unsubscribe(id) {
+		return Promise.resolve().then(() => {
+			if (id) {
+				if (typeof id === 'function') {
+					id = this._findSubId(id);
+					if (id === null) {
+						throw new SkyGridException('Subscription does not exist');
+					}
+				}
+
+				if (this._subCallbacks[id] === undefined) {
+					throw new SkyGridException('Subscription does not exist');
+				}
+
+				delete this._subCallbacks[id];
+			} else {
+				this._subCallbacks = {};
+			}
+
+			if (Util.objectEmpty(this._subCallbacks)) {
+				return this._subManager.removeSubscription(this._subId).then(() => {
+					this._subId = null;
+				});
 			}
 		});
 	}
@@ -418,5 +468,15 @@ export default class Device {
 	 */
 	discardChanges() {
 		this._changes = { properties: {} };
+	}
+
+	_findSubId(callback) {
+		for (let key in this._subCallbacks) {
+			if (this._subCallbacks[key] === callback) {
+				return key;
+			}
+		}
+
+		return null;
 	}
 }

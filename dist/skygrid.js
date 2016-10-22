@@ -194,120 +194,54 @@ var Acl = function () {
 exports.default = Acl;
 
 
-},{"./User":13,"./Util":14}],2:[function(require,module,exports){
+},{"./User":12,"./Util":13}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+  value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _events = require('events');
 
-var _RestApi = require('./RestApi');
-
-var _RestApi2 = _interopRequireDefault(_RestApi);
-
-var _SocketApi = require('./SocketApi');
-
-var _SocketApi2 = _interopRequireDefault(_SocketApi);
-
-var _EventEmitter = require('./EventEmitter');
-
-var _EventEmitter2 = _interopRequireDefault(_EventEmitter);
+var _events2 = _interopRequireDefault(_events);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 /**
  * @private
  */
-var Api = function () {
-	function Api() {
-		_classCallCheck(this, Api);
+var Api = function (_EventEmitter) {
+  _inherits(Api, _EventEmitter);
 
-		this.emitter = new _EventEmitter2.default();
-		this.current = null;
-	}
+  function Api() {
+    _classCallCheck(this, Api);
 
-	_createClass(Api, [{
-		key: 'setup',
-		value: function setup(address, apiType, projectId, masterKey) {
-			this.apis = {
-				rest: new _RestApi2.default(address, this.emitter),
-				websocket: new _SocketApi2.default(address, this.emitter)
-			};
+    return _possibleConstructorReturn(this, (Api.__proto__ || Object.getPrototypeOf(Api)).apply(this, arguments));
+  }
 
-			this.address = address;
-			this.projectId = projectId;
-			this.masterKey = masterKey;
-			this.setApiType(apiType);
-		}
-
-		/**
-   * Sets the API interface to be used.  Current valid options are "rest" and "websocket".
-   * @param {string} name The name of the API interface to use.
-   */
-
-	}, {
-		key: 'setApiType',
-		value: function setApiType(name) {
-			var next = this.apis[name];
-			if (next) {
-				if (this.current) {
-					this.current.close();
-				}
-
-				next.setup(this.projectId, this.masterKey);
-				this.current = next;
-			} else {
-				throw new Error('API type \'' + name + '\' unknown');
-			}
-		}
-	}, {
-		key: 'addListener',
-		value: function addListener(name, callback) {
-			this.emitter.addListener(name, callback);
-		}
-	}, {
-		key: 'request',
-		value: function request(name, data) {
-			return this.current.request(name, data);
-		}
-	}, {
-		key: 'api',
-		get: function get() {
-			return this.current;
-		}
-	}, {
-		key: 'usingMasterKey',
-		get: function get() {
-			return this.masterKey !== null;
-		}
-	}, {
-		key: 'connected',
-		get: function get() {
-			if (this.socket && this.current === this.socket) {
-				return this.socket.connected;
-			}
-
-			return false;
-		}
-	}]);
-
-	return Api;
-}();
+  return Api;
+}(_events2.default);
 
 exports.default = Api;
 
 
-},{"./EventEmitter":5,"./RestApi":7,"./SocketApi":11}],3:[function(require,module,exports){
+},{"events":41}],3:[function(require,module,exports){
 (function (global){
 'use strict';
 
 var _SkyGrid = require('./SkyGrid');
 
 var _SkyGrid2 = _interopRequireDefault(_SkyGrid);
+
+var _SkyGridException = require('./SkyGridException');
+
+var _SkyGridException2 = _interopRequireDefault(_SkyGridException);
 
 var _Acl = require('./Acl');
 
@@ -317,10 +251,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 global.SkyGrid = _SkyGrid2.default;
 global.Acl = _Acl2.default;
+global.SkyGridException = _SkyGridException2.default;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Acl":1,"./SkyGrid":9}],4:[function(require,module,exports){
+},{"./Acl":1,"./SkyGrid":8,"./SkyGridException":9}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -364,7 +299,10 @@ var Device = function () {
 		}
 
 		this._api = api.api;
-		this._subscriptionManager = api.subscriptionManager;
+		this._subManager = api.subscriptionManager;
+		this._subCallbacks = {};
+		this._subCount = 0;
+		this._subId = null;
 
 		this._changes = { properties: {} };
 		this._fetched = false;
@@ -625,7 +563,10 @@ var Device = function () {
    * NOTE: Subscribing is currently only available when using the websocket communication method.
    * 
    * @param  {Function} [callback] Optional callback that is raised when an update is received.
-   * @returns {void}
+   * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
+   *
+   * @example
+   * device.subscribe();
    *
    * @example
    * device.subscribe((device, changes) => {
@@ -647,14 +588,63 @@ var Device = function () {
 		value: function subscribe(callback) {
 			var _this3 = this;
 
-			this._subscriptionManager.addSubscription({
-				deviceId: this.id
-			}, function (device, changes) {
-				_this3._data = device._data;
-				_this3._fetched = true;
+			return Promise.resolve().then(function () {
+				if (_this3._subId === null) {
+					return _this3._subManager.addSubscription({
+						deviceId: _this3.id
+					}, function (changes, device) {
+						_this3._data = device._data;
+						_this3._fetched = true;
 
-				if (callback) {
-					callback(_this3, changes);
+						for (var key in _this3._subCallbacks) {
+							var _callback = _this3._subCallbacks[key];
+							_callback(changes, _this3);
+						}
+					}).then(function (id) {
+						_this3._subId = id;
+					});
+				}
+			}).then(function () {
+				var id = _this3._subCount++;
+				_this3._subCallbacks[id] = callback;
+				return id;
+			});
+		}
+
+		/**
+   * Unsubscribes the specified ID or callback from this device.
+   * If no ID or callback is specified, all subscriptions are removed.
+   * @param  {Number|Function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
+   * @return {Promise} A promise that resolves once the subscription has been removed.
+   */
+
+	}, {
+		key: 'unsubscribe',
+		value: function unsubscribe(id) {
+			var _this4 = this;
+
+			return Promise.resolve().then(function () {
+				if (id) {
+					if (typeof id === 'function') {
+						id = _this4._findSubId(id);
+						if (id === null) {
+							throw new SkyGridException('Subscription does not exist');
+						}
+					}
+
+					if (_this4._subCallbacks[id] === undefined) {
+						throw new SkyGridException('Subscription does not exist');
+					}
+
+					delete _this4._subCallbacks[id];
+				} else {
+					_this4._subCallbacks = {};
+				}
+
+				if (Util.objectEmpty(_this4._subCallbacks)) {
+					return _this4._subManager.removeSubscription(_this4._subId).then(function () {
+						_this4._subId = null;
+					});
 				}
 			});
 		}
@@ -668,6 +658,17 @@ var Device = function () {
 		key: 'discardChanges',
 		value: function discardChanges() {
 			this._changes = { properties: {} };
+		}
+	}, {
+		key: '_findSubId',
+		value: function _findSubId(callback) {
+			for (var key in this._subCallbacks) {
+				if (this._subCallbacks[key] === callback) {
+					return key;
+				}
+			}
+
+			return null;
 		}
 	}, {
 		key: 'id',
@@ -763,14 +764,14 @@ var Device = function () {
 		}
 
 		/**
-   * Gets a value deteremining whether this class is complete (has been fetched from the server).
+   * Gets a value deteremining whether this device is complete (has been fetched from the server).
    * @returns {boolean} true if the device is complete, otherwise false.
    */
 
 	}, {
 		key: 'isComplete',
 		get: function get() {
-			return this._fetched !== true;
+			return this._fetched === true;
 		}
 
 		/**
@@ -839,87 +840,7 @@ var Device = function () {
 exports.default = Device;
 
 
-},{"./Acl":1,"./Util":14}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var isFunction = function isFunction(obj) {
-	return typeof obj == 'function' || false;
-};
-
-/**
- * @private
- */
-
-var EventEmitter = function () {
-	function EventEmitter() {
-		_classCallCheck(this, EventEmitter);
-
-		this.listeners = new Map();
-	}
-
-	_createClass(EventEmitter, [{
-		key: 'addListener',
-		value: function addListener(label, callback) {
-			this.listeners.has(label) || this.listeners.set(label, []);
-			this.listeners.get(label).push(callback);
-		}
-	}, {
-		key: 'removeListener',
-		value: function removeListener(label, callback) {
-			var listeners = this.listeners.get(label),
-			    index = void 0;
-
-			if (listeners && listeners.length) {
-				index = listeners.reduce(function (i, listener, index) {
-					return isFunction(listener) && listener === callback ? i = index : i;
-				}, -1);
-
-				if (index > -1) {
-					listeners.splice(index, 1);
-					this.listeners.set(label, listeners);
-
-					return true;
-				}
-			}
-
-			return false;
-		}
-	}, {
-		key: 'emit',
-		value: function emit(label) {
-			for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-				args[_key - 1] = arguments[_key];
-			}
-
-			var listeners = this.listeners.get(label);
-
-			if (listeners && listeners.length) {
-				listeners.forEach(function (listener) {
-					listener.apply(undefined, args);
-				});
-
-				return true;
-			}
-
-			return false;
-		}
-	}]);
-
-	return EventEmitter;
-}();
-
-exports.default = EventEmitter;
-
-
-},{}],6:[function(require,module,exports){
+},{"./Acl":1,"./Util":13}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -930,9 +851,13 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _Api = require('./Api');
+var _SocketApi = require('./SocketApi');
 
-var _Api2 = _interopRequireDefault(_Api);
+var _SocketApi2 = _interopRequireDefault(_SocketApi);
+
+var _RestApi = require('./RestApi');
+
+var _RestApi2 = _interopRequireDefault(_RestApi);
 
 var _Device = require('./Device');
 
@@ -960,6 +885,19 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var API_URL = 'https://api.skygrid.io';
 
+function parseSettings(settings) {
+	settings = settings || {};
+	if (!settings.api) {
+		settings.api = 'websocket';
+	}
+
+	if (!settings.address) {
+		settings.address = API_URL;
+	}
+
+	return settings;
+}
+
 /**
  * Represents a project in the SkyGrid system.
  */
@@ -968,7 +906,6 @@ var Project = function () {
 	/**
   * [constructor description]
   * @param  {[type]} projectId [description]
-  * @param  {[type]} masterKey [description]
   * @param  {[type]} settings  [description]
   * @return {[type]}           [description]
   * @private
@@ -978,35 +915,29 @@ var Project = function () {
 
 		_classCallCheck(this, Project);
 
-		this._api = new _Api2.default();
-		this._serverTime = 0;
+		settings = parseSettings(settings);
+
+		switch (settings.api) {
+			case 'rest':
+				this._api = new _RestApi2.default(settings.address, projectId);
+				break;
+			case 'websocket':
+				this._api = new _SocketApi2.default(settings.address, projectId);
+				break;
+		}
+
+		this._projectId = projectId;
 		this._subscriptionManager = new _SubscriptionManager2.default(this._api);
-		this._openProject(projectId, settings);
+		this._subscriptions = {};
+		this._serverTime = 0;
 
-		this._api.addListener('connect', function () {
-			_this._subscriptionManager.requestSubscriptions();
-		});
+		this._setupListeners();
 
-		this._api.addListener('update', function (message) {
-			var device = _this.device(message.device);
-			_this._subscriptionManager.raise(message.id, device, message.changes);
-		});
-
-		this._api.addListener('disconnect', function () {
-			_this._subscriptionManager.invalidateSubscriptions();
-		});
-
-		setInterval(function () {
+		this._timeInterval = setInterval(function () {
 			_this.fetchServerTime();
 		}, 30000);
 		this.fetchServerTime();
 	}
-
-	/**
-  * Returns the last fetched server time.
-  * @returns {Date} The last fetched server time.
-  */
-
 
 	_createClass(Project, [{
 		key: 'fetchServerTime',
@@ -1027,30 +958,18 @@ var Project = function () {
 		}
 
 		/**
-   * [_openProject description]
-   * @param  {[type]} projectId [description]
-   * @param  {[type]} settings  [description]
+   * [loginMaster description]
+   * @param  {string} masterKey [description]
    * @returns {[type]}           [description]
    * @private
    */
 
 	}, {
-		key: '_openProject',
-		value: function _openProject(projectId, settings) {
-			settings = settings || {};
-			if (!settings.api) {
-				settings.api = 'websocket';
-			}
-
-			if (!settings.address) {
-				settings.address = API_URL;
-			}
-
-			this._projectId = projectId;
-			this._masterKey = null;
-			this._subscriptions = {};
-
-			this._api.setup(settings.address, settings.api, projectId, null);
+		key: 'loginMaster',
+		value: function loginMaster(masterKey) {
+			return this._api.request('loginMaster', {
+				masterKey: masterKey
+			});
 		}
 
 		/**
@@ -1076,19 +995,6 @@ var Project = function () {
 				};
 			});
 		}
-
-		/**
-   * [loginMaster description]
-   * @param  {[type]} masterKey [description]
-   * @returns {[type]}           [description]
-   * @private
-   */
-
-	}, {
-		key: 'loginMaster',
-		value: function loginMaster(masterKey) {}
-		// NYI
-
 
 		/**
    * Logs out the currently logged in user.
@@ -1295,11 +1201,41 @@ var Project = function () {
 			return this.removeSubscriptions().then(function () {
 				return _this11._api.close();
 			}).then(function () {
+				clearInterval(_this11._timeInterval);
 				_this11._projectId = null;
-				_this11._masterKey = null;
 				_this11._user = null;
+				_this11._timeInterval = null;
 			});
 		}
+	}, {
+		key: '_setupListeners',
+		value: function _setupListeners() {
+			var _this12 = this;
+
+			this._api.on('connect', function () {
+				_this12._subscriptionManager.requestSubscriptions();
+			});
+
+			this._api.on('update', function (message) {
+				var device = _this12.device(message.device);
+				_this12._subscriptionManager.raise(message.id, message.changes, device);
+			});
+
+			this._api.on('disconnect', function () {
+				_this12._subscriptionManager.invalidateSubscriptions();
+			});
+		}
+	}, {
+		key: 'id',
+		get: function get() {
+			return this._projectId;
+		}
+
+		/**
+   * Returns the last fetched server time.
+   * @returns {Date} The last fetched server time.
+   */
+
 	}, {
 		key: 'serverTime',
 		get: function get() {
@@ -1313,7 +1249,7 @@ var Project = function () {
 exports.default = Project;
 
 
-},{"./Api":2,"./Device":4,"./Schema":8,"./SkyGridException":10,"./SubscriptionManager":12,"./User":13}],7:[function(require,module,exports){
+},{"./Device":4,"./RestApi":6,"./Schema":7,"./SkyGridException":9,"./SocketApi":10,"./SubscriptionManager":11,"./User":12}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1321,6 +1257,10 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Api2 = require('./Api');
+
+var _Api3 = _interopRequireDefault(_Api2);
 
 var _SkyGridException = require('./SkyGridException');
 
@@ -1330,14 +1270,18 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 function checkStatus(response) {
 	if (response.status >= 200 && response.status < 300) {
 		return response;
-	} else {
-		var error = new Error(response.statusText);
-		error.response = response;
-		throw error;
 	}
+
+	var error = new Error(response.statusText);
+	error.response = response;
+	throw error;
 }
 
 function parseJSON(response) {
@@ -1360,21 +1304,26 @@ function generateQueryUrl(url, queries) {
  * @private
  */
 
-var RestApi = function () {
-	function RestApi(address) {
-		var _this = this;
+var RestApi = function (_Api) {
+	_inherits(RestApi, _Api);
 
+	function RestApi(address, projectId) {
 		_classCallCheck(this, RestApi);
 
-		this.address = address;
+		var _this = _possibleConstructorReturn(this, (RestApi.__proto__ || Object.getPrototypeOf(RestApi)).call(this));
 
-		this.endPoints = {
+		_this._address = address;
+		_this._projectId = projectId;
+		_this._masterKey = null;
+		_this._token = null;
+
+		_this._endPoints = {
 			signup: function signup(data) {
-				return _this.fetchJson('/users', { method: 'post', body: data });
+				return _this._fetchJson('/users', { method: 'post', body: data });
 			},
 
 			login: function login(data) {
-				return _this.fetchJson('/login', {
+				return _this._fetchJson('/login', {
 					method: 'post',
 					body: data
 				}).then(function (data) {
@@ -1383,93 +1332,92 @@ var RestApi = function () {
 				});
 			},
 
+			loginMaster: function loginMaster(data) {
+				_this._masterKey = data.masterKey;
+				return Promise.resolve();
+			},
+
 			logout: function logout() {
-				return _this.fetchJson('/logout', { method: 'post' });
+				return _this._fetchJson('/logout', { method: 'post' });
 			},
 
 			fetchUser: function fetchUser(data) {
-				return _this.fetchJson('/users/' + data.userId, { method: 'get' });
+				return _this._fetchJson('/users/' + data.userId, { method: 'get' });
 			},
 
 			findUsers: function findUsers(data) {
 				var url = generateQueryUrl('/users', data.constraints);
-				return _this.fetchJson(url, { method: 'get' });
+				return _this._fetchJson(url, { method: 'get' });
 			},
 
 			deleteUser: function deleteUser(data) {
-				return _this.fetchJson('/users/' + data.userId, { method: 'delete' });
+				return _this._fetchJson('/users/' + data.userId, { method: 'delete' });
 			},
 
 			findDeviceSchemas: function findDeviceSchemas(data) {
 				var url = generateQueryUrl('/schemas', data.constraints);
-				return _this.fetchJson(url, { method: 'get' });
+				return _this._fetchJson(url, { method: 'get' });
 			},
 
 			addDeviceSchema: function addDeviceSchema(data) {
-				return _this.fetchJson('/schemas', { method: 'post', body: data });
+				return _this._fetchJson('/schemas', { method: 'post', body: data });
 			},
 
 			fetchDeviceSchema: function fetchDeviceSchema(data) {
-				return _this.fetchJson('/schemas/' + data.schemaId, { method: 'get' });
+				return _this._fetchJson('/schemas/' + data.schemaId, { method: 'get' });
 			},
 
 			updateDeviceSchema: function updateDeviceSchema(data) {
 				var schemaId = data.schemaId;
 				delete data.schemaId;
-				return _this.fetchJson('/schemas/' + schemaId, { method: 'put', body: data });
+				return _this._fetchJson('/schemas/' + schemaId, { method: 'put', body: data });
 			},
 
 			deleteDeviceSchema: function deleteDeviceSchema(data) {
-				return _this.fetchJson('/schemas/' + data.schemaId, { method: 'delete' });
+				return _this._fetchJson('/schemas/' + data.schemaId, { method: 'delete' });
 			},
 
 			findDevices: function findDevices(data) {
 				var url = generateQueryUrl('/devices', data.constraints);
-				return _this.fetchJson(url, { method: 'get' });
+				return _this._fetchJson(url, { method: 'get' });
 			},
 
 			addDevice: function addDevice(data) {
-				return _this.fetchJson('/devices', { method: 'post', body: data });
+				return _this._fetchJson('/devices', { method: 'post', body: data });
 			},
 
 			fetchDevice: function fetchDevice(data) {
-				return _this.fetchJson('/devices/' + data.deviceId, { method: 'get' });
+				return _this._fetchJson('/devices/' + data.deviceId, { method: 'get' });
 			},
 
 			updateDevice: function updateDevice(data) {
 				var deviceId = data.deviceId;
 				delete data.deviceId;
-				return _this.fetchJson('/devices/' + deviceId, { method: 'put', body: data });
+				return _this._fetchJson('/devices/' + deviceId, { method: 'put', body: data });
 			},
 
 			deleteDevice: function deleteDevice(data) {
-				return _this.fetchJson('/devices/' + data.deviceId, { method: 'delete' });
+				return _this._fetchJson('/devices/' + data.deviceId, { method: 'delete' });
 			},
 
 			fetchHistory: function fetchHistory(data) {
-				return _this.fetchJson('/history/' + data.deviceId, { method: 'get' });
+				return _this._fetchJson('/history/' + data.deviceId, { method: 'get' });
 			},
 
 			getServerTime: function getServerTime(data) {
-				return _this.fetchJson('/time', { method: 'get' });
+				return _this._fetchJson('/time', { method: 'get' });
 			}
 		};
+		return _this;
 	}
 
 	_createClass(RestApi, [{
-		key: 'setup',
-		value: function setup(projectId, masterKey) {
-			this.projectId = projectId;
-			this.masterKey = masterKey;
-			this.token = null;
-		}
-	}, {
 		key: 'close',
 		value: function close() {}
 	}, {
 		key: 'request',
 		value: function request(name, data) {
-			var ep = this.endPoints[name];
+			var ep = this._endPoints[name];
 			if (ep) {
 				return ep(data);
 			}
@@ -1477,8 +1425,8 @@ var RestApi = function () {
 			throw new _SkyGridException2.default('API end point \'' + name + '\' does not exist on the REST API');
 		}
 	}, {
-		key: 'fetchJson',
-		value: function fetchJson(url, params) {
+		key: '_fetchJson',
+		value: function _fetchJson(url, params) {
 			if (!params.headers) {
 				params.headers = {};
 			}
@@ -1486,32 +1434,32 @@ var RestApi = function () {
 			params.headers['Accept'] = 'application/json';
 			params.headers['Content-Type'] = 'application/json';
 
-			if (this.token) {
-				params.headers['X-Access-Token'] = this.token;
+			if (this._token) {
+				params.headers['X-Access-Token'] = this._token;
 			} else {
-				if (this.masterKey) {
-					params.headers['X-Master-Key'] = this.masterKey;
+				if (this._masterKey) {
+					params.headers['X-Master-Key'] = this._masterKey;
 				}
 
-				params.headers['X-Project-ID'] = this.projectId;
+				params.headers['X-Project-ID'] = this._projectId;
 			}
 
 			if (params.body) {
 				params.body = JSON.stringify(params.body);
 			}
 
-			var fullUrl = this.address + url;
+			var fullUrl = this._address + url;
 			return fetch(fullUrl, params).then(checkStatus).then(parseJSON);
 		}
 	}]);
 
 	return RestApi;
-}();
+}(_Api3.default);
 
 exports.default = RestApi;
 
 
-},{"./SkyGridException":10}],8:[function(require,module,exports){
+},{"./Api":2,"./SkyGridException":9}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1917,25 +1865,17 @@ var Schema = function () {
 exports.default = Schema;
 
 
-},{"./Acl":1,"./Util":14}],9:[function(require,module,exports){
+},{"./Acl":1,"./Util":13}],8:[function(require,module,exports){
 'use strict';
 
-/*import Project from './Project';
-
-export default class SkyGrid {
-	static project(projectId, settings) {
-		return new Project(projectId, settings);
-	}
-}*/
-
-var Project = require('./project');
+var Project = require('./Project');
 
 exports.project = function (projectId, settings) {
 	return new Project.default(projectId, settings);
 };
 
 
-},{"./project":6}],10:[function(require,module,exports){
+},{"./Project":5}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1975,7 +1915,7 @@ function SkyGridException(message) {
 exports.default = SkyGridException;
 
 
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1983,6 +1923,10 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Api2 = require('./Api');
+
+var _Api3 = _interopRequireDefault(_Api2);
 
 var _SkyGridException = require('./SkyGridException');
 
@@ -2000,76 +1944,79 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 /**
  * @private
  */
-var SocketApi = function () {
-	function SocketApi(address, emitter) {
+var SocketApi = function (_Api) {
+	_inherits(SocketApi, _Api);
+
+	function SocketApi(address, projectId) {
 		_classCallCheck(this, SocketApi);
 
-		this.address = address;
-		this.emitter = emitter;
-		this.session = false;
-		this.connected = false;
+		var _this = _possibleConstructorReturn(this, (SocketApi.__proto__ || Object.getPrototypeOf(SocketApi)).call(this));
+
+		_this._address = address;
+		_this._projectId = projectId;
+		_this._session = false;
+		_this._connected = false;
+		_this._socket = null;
+		_this._masterKey = null;
+
+		if (!_this._socket) {
+			_this._socket = _socket2.default.connect(_this._address, { secure: true });
+
+			_this._socket.on('connect', function () {
+				_this._session = false;
+				_this._connected = true;
+				_this.emit('connect');
+			});
+
+			_this._socket.on('update', function (data) {
+				_this.emit('update', data);
+			});
+
+			_this._socket.on('disconnect', function () {
+				_this._session = false;
+				_this._connected = false;
+				_this.emit('disconnect');
+			});
+		}
+		return _this;
 	}
 
 	_createClass(SocketApi, [{
-		key: 'setup',
-		value: function setup(projectId, masterKey) {
-			var _this = this;
-
-			this.projectId = projectId;
-			this.masterKey = masterKey;
-
-			if (!this.socket) {
-				this.socket = _socket2.default.connect(this.address, { secure: true });
-
-				this.socket.on('connect', function () {
-					_this.session = false;
-					_this.connected = true;
-					_this.emitter.emit('connect');
-				});
-
-				this.socket.on('update', function (data) {
-					_this.emitter.emit('update', data);
-				});
-
-				this.socket.on('disconnect', function () {
-					_this.session = false;
-					_this.connected = false;
-					_this.emitter.emit('disconnect');
-				});
-			}
-		}
-	}, {
 		key: 'close',
 		value: function close() {
-			this.socket.close();
-			this.socket = null;
+			this._socket.close();
+			this._socket = null;
 		}
 	}, {
 		key: 'request',
 		value: function request(name, data) {
 			var _this2 = this;
 
-			if (this.session) {
-				return this.makeRequest(name, data);
+			if (this._session) {
+				return this._makeRequest(name, data);
 			}
 
-			return this.makeRequest('createSession', {
-				projectId: this.projectId
+			return this._makeRequest('createSession', {
+				projectId: this._projectId
 			}).then(function () {
-				_this2.session = true;
-				if (_this2.masterKey) {
-					return _this2.makeRequest('loginMaster', { masterKey: _this2.masterKey });
+				_this2._session = true;
+				if (name !== 'loginMaster' && _this2._masterKey) {
+					return _this2._makeRequest('loginMaster', { masterKey: _this2._masterKey });
 				}
 			}).then(function () {
-				return _this2.makeRequest(name, data);
+				return _this2._makeRequest(name, data);
 			});
 		}
 	}, {
-		key: 'makeRequest',
-		value: function makeRequest(name, data) {
+		key: '_makeRequest',
+		value: function _makeRequest(name, data) {
 			var _this3 = this;
 
 			var request = {
@@ -2081,7 +2028,7 @@ var SocketApi = function () {
 			}
 
 			return new Promise(function (resolve, reject) {
-				_this3.socket.emit('message', request, function (response) {
+				_this3._socket.emit('message', request, function (response) {
 					if (response.status === 'ok') {
 						resolve(response.data);
 					} else if (typeof response.data === 'string') {
@@ -2095,12 +2042,12 @@ var SocketApi = function () {
 	}]);
 
 	return SocketApi;
-}();
+}(_Api3.default);
 
 exports.default = SocketApi;
 
 
-},{"./SkyGridException":10,"./ValidationException":15,"socket.io-client":51}],12:[function(require,module,exports){
+},{"./Api":2,"./SkyGridException":9,"./ValidationException":14,"socket.io-client":51}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2149,13 +2096,19 @@ var SubscriptionManager = function () {
 		}
 	}, {
 		key: 'removeSubscription',
-		value: function removeSubscription(id) {}
+		value: function removeSubscription(id) {
+			if (this._api) {
+				return this._api.request('unsubscribe', { subscriptionId: id });
+			}
+
+			return Promise.reject();
+		}
 	}, {
 		key: 'raise',
-		value: function raise(id, device, changes) {
+		value: function raise(id, changes, device) {
 			var sub = this._subscriptions[id];
 			if (sub) {
-				sub.callback(device, changes);
+				sub.callback(changes, device);
 			} else {
 				throw new _SkyGridException2.default('Subscription not found');
 			}
@@ -2182,17 +2135,17 @@ var SubscriptionManager = function () {
 		value: function removeSubscriptions() {
 			var _this = this;
 
-			var promises = [];
 			if (this._api) {
-				for (var subId in this._subscriptions) {
-					var prom = this._api.request('unsubscribe', { subscriptionId: subId });
-					promises.push(prom);
-				}
+				var promises = this._subscriptions.map(function (subId) {
+					return _this.removeSubscription(subId);
+				});
+
+				return Promise.all(promises).then(function () {
+					_this._subscriptions = {};
+				});
 			}
 
-			return Promise.all(promises).then(function () {
-				_this._subscriptions = {};
-			});
+			return Promise.reject();
 		}
 	}, {
 		key: '_requestSubscription',
@@ -2202,6 +2155,8 @@ var SubscriptionManager = function () {
 			return this._api.request('subscribe', sub.settings).then(function () {
 				sub.active = true;
 				_this2._subscriptions[sub.settings.subscriptionId] = sub;
+			}).then(function () {
+				return sub.settings.subscriptionId;
 			});
 		}
 	}]);
@@ -2212,7 +2167,7 @@ var SubscriptionManager = function () {
 exports.default = SubscriptionManager;
 
 
-},{"./SkyGridException":10}],13:[function(require,module,exports){
+},{"./SkyGridException":9}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2350,7 +2305,7 @@ var User = function () {
 exports.default = User;
 
 
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2450,7 +2405,7 @@ function fixDataDates(data) {
 }
 
 
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2485,7 +2440,7 @@ ValidationException.prototype.name = 'ValidationException';
 ValidationException.prototype.constructor = ValidationException;
 
 
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -2515,7 +2470,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -2546,7 +2501,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],18:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -2633,7 +2588,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],19:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -2702,7 +2657,7 @@ Backoff.prototype.setJitter = function(jitter){
   };
 })();
 
-},{}],20:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -2802,9 +2757,9 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -2829,7 +2784,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -2992,7 +2947,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],24:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -3000,7 +2955,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],25:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -3170,7 +3125,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":26}],26:[function(require,module,exports){
+},{"./debug":25}],25:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -3369,11 +3324,11 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":47}],27:[function(require,module,exports){
+},{"ms":47}],26:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":28}],28:[function(require,module,exports){
+},{"./lib/":27}],27:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -3385,7 +3340,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":29,"engine.io-parser":38}],29:[function(require,module,exports){
+},{"./socket":28,"engine.io-parser":37}],28:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -4108,7 +4063,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":30,"./transports":31,"component-emitter":37,"debug":25,"engine.io-parser":38,"indexof":45,"parsejson":48,"parseqs":49,"parseuri":50}],30:[function(require,module,exports){
+},{"./transport":29,"./transports":30,"component-emitter":36,"debug":24,"engine.io-parser":37,"indexof":45,"parsejson":48,"parseqs":49,"parseuri":50}],29:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -4265,7 +4220,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":37,"engine.io-parser":38}],31:[function(require,module,exports){
+},{"component-emitter":36,"engine.io-parser":37}],30:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -4322,7 +4277,7 @@ function polling (opts) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":32,"./polling-xhr":33,"./websocket":35,"xmlhttprequest-ssl":36}],32:[function(require,module,exports){
+},{"./polling-jsonp":31,"./polling-xhr":32,"./websocket":34,"xmlhttprequest-ssl":35}],31:[function(require,module,exports){
 (function (global){
 
 /**
@@ -4557,7 +4512,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":34,"component-inherit":24}],33:[function(require,module,exports){
+},{"./polling":33,"component-inherit":23}],32:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -4973,7 +4928,7 @@ function unloadHandler () {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":34,"component-emitter":37,"component-inherit":24,"debug":25,"xmlhttprequest-ssl":36}],34:[function(require,module,exports){
+},{"./polling":33,"component-emitter":36,"component-inherit":23,"debug":24,"xmlhttprequest-ssl":35}],33:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -5220,7 +5175,7 @@ Polling.prototype.uri = function () {
   return schema + '://' + (ipv6 ? '[' + this.hostname + ']' : this.hostname) + port + this.path + query;
 };
 
-},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":49,"xmlhttprequest-ssl":36,"yeast":63}],35:[function(require,module,exports){
+},{"../transport":29,"component-inherit":23,"debug":24,"engine.io-parser":37,"parseqs":49,"xmlhttprequest-ssl":35,"yeast":63}],34:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -5515,7 +5470,7 @@ WS.prototype.check = function () {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":49,"ws":21,"yeast":63}],36:[function(require,module,exports){
+},{"../transport":29,"component-inherit":23,"debug":24,"engine.io-parser":37,"parseqs":49,"ws":20,"yeast":63}],35:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 
 // Indicate to eslint that ActiveXObject is global
@@ -5557,7 +5512,7 @@ module.exports = function (opts) {
   }
 };
 
-},{"has-cors":44}],37:[function(require,module,exports){
+},{"has-cors":44}],36:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -5723,7 +5678,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -6333,7 +6288,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":39,"after":16,"arraybuffer.slice":17,"base64-arraybuffer":19,"blob":20,"has-binary":40,"wtf-8":62}],39:[function(require,module,exports){
+},{"./keys":38,"after":15,"arraybuffer.slice":16,"base64-arraybuffer":18,"blob":19,"has-binary":39,"wtf-8":62}],38:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -6354,7 +6309,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],40:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 (function (global){
 
 /*
@@ -6416,10 +6371,314 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":41}],41:[function(require,module,exports){
+},{"isarray":40}],40:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
+
+},{}],41:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+function EventEmitter() {
+  this._events = this._events || {};
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+EventEmitter.defaultMaxListeners = 10;
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function(n) {
+  if (!isNumber(n) || n < 0 || isNaN(n))
+    throw TypeError('n must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+EventEmitter.prototype.emit = function(type) {
+  var er, handler, len, args, i, listeners;
+
+  if (!this._events)
+    this._events = {};
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events.error ||
+        (isObject(this._events.error) && !this._events.error.length)) {
+      er = arguments[1];
+      if (er instanceof Error) {
+        throw er; // Unhandled 'error' event
+      } else {
+        // At least give some kind of context to the user
+        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+        err.context = er;
+        throw err;
+      }
+    }
+  }
+
+  handler = this._events[type];
+
+  if (isUndefined(handler))
+    return false;
+
+  if (isFunction(handler)) {
+    switch (arguments.length) {
+      // fast cases
+      case 1:
+        handler.call(this);
+        break;
+      case 2:
+        handler.call(this, arguments[1]);
+        break;
+      case 3:
+        handler.call(this, arguments[1], arguments[2]);
+        break;
+      // slower
+      default:
+        args = Array.prototype.slice.call(arguments, 1);
+        handler.apply(this, args);
+    }
+  } else if (isObject(handler)) {
+    args = Array.prototype.slice.call(arguments, 1);
+    listeners = handler.slice();
+    len = listeners.length;
+    for (i = 0; i < len; i++)
+      listeners[i].apply(this, args);
+  }
+
+  return true;
+};
+
+EventEmitter.prototype.addListener = function(type, listener) {
+  var m;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events)
+    this._events = {};
+
+  // To avoid recursion in the case that type === "newListener"! Before
+  // adding it to the listeners, first emit "newListener".
+  if (this._events.newListener)
+    this.emit('newListener', type,
+              isFunction(listener.listener) ?
+              listener.listener : listener);
+
+  if (!this._events[type])
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  else if (isObject(this._events[type]))
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  else
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+
+  // Check for listener leak
+  if (isObject(this._events[type]) && !this._events[type].warned) {
+    if (!isUndefined(this._maxListeners)) {
+      m = this._maxListeners;
+    } else {
+      m = EventEmitter.defaultMaxListeners;
+    }
+
+    if (m && m > 0 && this._events[type].length > m) {
+      this._events[type].warned = true;
+      console.error('(node) warning: possible EventEmitter memory ' +
+                    'leak detected. %d listeners added. ' +
+                    'Use emitter.setMaxListeners() to increase limit.',
+                    this._events[type].length);
+      if (typeof console.trace === 'function') {
+        // not supported in IE 10
+        console.trace();
+      }
+    }
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.once = function(type, listener) {
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  var fired = false;
+
+  function g() {
+    this.removeListener(type, g);
+
+    if (!fired) {
+      fired = true;
+      listener.apply(this, arguments);
+    }
+  }
+
+  g.listener = listener;
+  this.on(type, g);
+
+  return this;
+};
+
+// emits a 'removeListener' event iff the listener was removed
+EventEmitter.prototype.removeListener = function(type, listener) {
+  var list, position, length, i;
+
+  if (!isFunction(listener))
+    throw TypeError('listener must be a function');
+
+  if (!this._events || !this._events[type])
+    return this;
+
+  list = this._events[type];
+  length = list.length;
+  position = -1;
+
+  if (list === listener ||
+      (isFunction(list.listener) && list.listener === listener)) {
+    delete this._events[type];
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+
+  } else if (isObject(list)) {
+    for (i = length; i-- > 0;) {
+      if (list[i] === listener ||
+          (list[i].listener && list[i].listener === listener)) {
+        position = i;
+        break;
+      }
+    }
+
+    if (position < 0)
+      return this;
+
+    if (list.length === 1) {
+      list.length = 0;
+      delete this._events[type];
+    } else {
+      list.splice(position, 1);
+    }
+
+    if (this._events.removeListener)
+      this.emit('removeListener', type, listener);
+  }
+
+  return this;
+};
+
+EventEmitter.prototype.removeAllListeners = function(type) {
+  var key, listeners;
+
+  if (!this._events)
+    return this;
+
+  // not listening for removeListener, no need to emit
+  if (!this._events.removeListener) {
+    if (arguments.length === 0)
+      this._events = {};
+    else if (this._events[type])
+      delete this._events[type];
+    return this;
+  }
+
+  // emit removeListener for all listeners on all events
+  if (arguments.length === 0) {
+    for (key in this._events) {
+      if (key === 'removeListener') continue;
+      this.removeAllListeners(key);
+    }
+    this.removeAllListeners('removeListener');
+    this._events = {};
+    return this;
+  }
+
+  listeners = this._events[type];
+
+  if (isFunction(listeners)) {
+    this.removeListener(type, listeners);
+  } else if (listeners) {
+    // LIFO order
+    while (listeners.length)
+      this.removeListener(type, listeners[listeners.length - 1]);
+  }
+  delete this._events[type];
+
+  return this;
+};
+
+EventEmitter.prototype.listeners = function(type) {
+  var ret;
+  if (!this._events || !this._events[type])
+    ret = [];
+  else if (isFunction(this._events[type]))
+    ret = [this._events[type]];
+  else
+    ret = this._events[type].slice();
+  return ret;
+};
+
+EventEmitter.prototype.listenerCount = function(type) {
+  if (this._events) {
+    var evlistener = this._events[type];
+
+    if (isFunction(evlistener))
+      return 1;
+    else if (evlistener)
+      return evlistener.length;
+  }
+  return 0;
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  return emitter.listenerCount(type);
+};
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
+function isNumber(arg) {
+  return typeof arg === 'number';
+}
+
+function isObject(arg) {
+  return typeof arg === 'object' && arg !== null;
+}
+
+function isUndefined(arg) {
+  return arg === void 0;
+}
 
 },{}],42:[function(require,module,exports){
 (function (global){
@@ -6485,8 +6744,8 @@ function hasBinary(data) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"isarray":43}],43:[function(require,module,exports){
-arguments[4][41][0].apply(exports,arguments)
-},{"dup":41}],44:[function(require,module,exports){
+arguments[4][40][0].apply(exports,arguments)
+},{"dup":40}],44:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -7775,7 +8034,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":52,"./socket":54,"./url":55,"debug":25,"socket.io-parser":57}],52:[function(require,module,exports){
+},{"./manager":52,"./socket":54,"./url":55,"debug":24,"socket.io-parser":57}],52:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -8337,7 +8596,7 @@ Manager.prototype.onreconnect = function () {
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":53,"./socket":54,"backo2":18,"component-bind":22,"component-emitter":23,"debug":25,"engine.io-client":27,"indexof":45,"socket.io-parser":57}],53:[function(require,module,exports){
+},{"./on":53,"./socket":54,"backo2":17,"component-bind":21,"component-emitter":22,"debug":24,"engine.io-client":26,"indexof":45,"socket.io-parser":57}],53:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -8784,7 +9043,7 @@ Socket.prototype.compress = function (compress) {
   return this;
 };
 
-},{"./on":53,"component-bind":22,"component-emitter":23,"debug":25,"has-binary":42,"socket.io-parser":57,"to-array":61}],55:[function(require,module,exports){
+},{"./on":53,"component-bind":21,"component-emitter":22,"debug":24,"has-binary":42,"socket.io-parser":57,"to-array":61}],55:[function(require,module,exports){
 (function (global){
 
 /**
@@ -8863,7 +9122,7 @@ function url (uri, loc) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":25,"parseuri":50}],56:[function(require,module,exports){
+},{"debug":24,"parseuri":50}],56:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -9410,7 +9669,7 @@ function error(data){
   };
 }
 
-},{"./binary":56,"./is-buffer":58,"component-emitter":59,"debug":25,"isarray":60,"json3":46}],58:[function(require,module,exports){
+},{"./binary":56,"./is-buffer":58,"component-emitter":59,"debug":24,"isarray":60,"json3":46}],58:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -9428,10 +9687,10 @@ function isBuf(obj) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],59:[function(require,module,exports){
-arguments[4][37][0].apply(exports,arguments)
-},{"dup":37}],60:[function(require,module,exports){
-arguments[4][41][0].apply(exports,arguments)
-},{"dup":41}],61:[function(require,module,exports){
+arguments[4][36][0].apply(exports,arguments)
+},{"dup":36}],60:[function(require,module,exports){
+arguments[4][40][0].apply(exports,arguments)
+},{"dup":40}],61:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {

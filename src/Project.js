@@ -1,4 +1,5 @@
-import Api from './Api';
+import SocketApi from './SocketApi';
+import RestApi from './RestApi';
 import Device from './Device';
 import Schema from './Schema';
 import User from './User';
@@ -7,6 +8,19 @@ import SkyGridException from './SkyGridException';
 
 const API_URL = 'https://api.skygrid.io';
 
+function parseSettings(settings) {
+	settings = settings || {};
+	if (!settings.api) {
+		settings.api = 'websocket';
+	}
+
+	if (!settings.address) {
+		settings.address = API_URL;
+	}
+
+	return settings;
+}
+
 /**
  * Represents a project in the SkyGrid system.
  */
@@ -14,32 +28,35 @@ export default class Project {
 	/**
 	 * [constructor description]
 	 * @param  {[type]} projectId [description]
-	 * @param  {[type]} masterKey [description]
 	 * @param  {[type]} settings  [description]
 	 * @return {[type]}           [description]
 	 * @private
 	 */
 	constructor(projectId, settings) {
-		this._api = new Api();
-		this._serverTime = 0;
+		settings = parseSettings(settings);
+
+		switch (settings.api) {
+			case 'rest': 
+				this._api = new RestApi(settings.address, projectId);
+				break;
+			case 'websocket': 
+				this._api = new SocketApi(settings.address, projectId);
+				break;
+		}
+
+		this._projectId = projectId;
 		this._subscriptionManager = new SubscriptionManager(this._api);
-		this._openProject(projectId, settings);
+		this._subscriptions = {};
+		this._serverTime = 0;
+		
+		this._setupListeners();
 
-		this._api.addListener('connect', () => {
-			this._subscriptionManager.requestSubscriptions();
-		});
-
-		this._api.addListener('update', message => {
-			let device = this.device(message.device);
-			this._subscriptionManager.raise(message.id, device, message.changes);
-		});
-
-		this._api.addListener('disconnect', () => {
-			this._subscriptionManager.invalidateSubscriptions();
-		});
-
-		setInterval(() => { this.fetchServerTime(); }, 30000);
+		this._timeInterval = setInterval(() => { this.fetchServerTime(); }, 30000);
 		this.fetchServerTime();
+	}
+
+	get id() {
+		return this._projectId;
 	}
 
 	/**
@@ -63,27 +80,15 @@ export default class Project {
 	}
 
 	/**
-	 * [_openProject description]
-	 * @param  {[type]} projectId [description]
-	 * @param  {[type]} settings  [description]
+	 * [loginMaster description]
+	 * @param  {string} masterKey [description]
 	 * @returns {[type]}           [description]
 	 * @private
 	 */
-	_openProject(projectId, settings) {
-		settings = settings || {};
-		if (!settings.api) {
-			settings.api = 'websocket';
-		}
-
-		if (!settings.address) {
-			settings.address = API_URL;
-		}
-
-		this._projectId = projectId;
-		this._masterKey = null;
-		this._subscriptions = {};
-
-		this._api.setup(settings.address, settings.api, projectId, null);
+	loginMaster(masterKey) {
+		return this._api.request('loginMaster', {
+			masterKey: masterKey
+		});
 	}
 
 	/**
@@ -103,16 +108,6 @@ export default class Project {
 				token: userData.token
 			};
 		});
-	}
-
-	/**
-	 * [loginMaster description]
-	 * @param  {[type]} masterKey [description]
-	 * @returns {[type]}           [description]
-	 * @private
-	 */
-	loginMaster(masterKey) {
-		// NYI
 	}
 
 	/**
@@ -265,9 +260,25 @@ export default class Project {
 		return this.removeSubscriptions().then(() => {
 			return this._api.close();
 		}).then(() => {
+			clearInterval(this._timeInterval);
 			this._projectId = null;
-			this._masterKey = null;
 			this._user = null;
+			this._timeInterval = null;
+		});
+	}
+
+	_setupListeners() {
+		this._api.on('connect', () => {
+			this._subscriptionManager.requestSubscriptions();
+		});
+
+		this._api.on('update', message => {
+			const device = this.device(message.device);
+			this._subscriptionManager.raise(message.id, message.changes, device);
+		});
+
+		this._api.on('disconnect', () => {
+			this._subscriptionManager.invalidateSubscriptions();
 		});
 	}
 }

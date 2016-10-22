@@ -1,3 +1,4 @@
+import Api from './Api';
 import SkyGridException from './SkyGridException';
 import ValidationException from './ValidationException';
 import io from 'socket.io-client';
@@ -5,79 +6,78 @@ import io from 'socket.io-client';
 /**
  * @private
  */
-export default class SocketApi {
-	constructor(address, emitter) {
-		this.address = address;
-		this.emitter = emitter;
-		this.session = false;
-		this.connected = false;
-	}
-
-	setup(projectId, masterKey) {
-		this.projectId = projectId;
-		this.masterKey = masterKey;
+export default class SocketApi extends Api {
+	constructor(address, projectId) {
+		super(); 
 		
-		if (!this.socket) {
-			this.socket = io.connect(this.address, {secure: true});
+		this._address = address;
+		this._projectId = projectId;
+		this._session = false;
+		this._connected = false;
+		this._socket = null;
+		this._masterKey = null;
 
-			this.socket.on('connect', () => {
-				this.session = false;
-				this.connected = true;
-				this.emitter.emit('connect');
+		if (!this._socket) {
+			this._socket = io.connect(this._address, { secure: true });
+
+			this._socket.on('connect', () => {
+				this._session = false;
+				this._connected = true;
+				this.emit('connect');
 			});
 
-			this.socket.on('update', data => {
-				this.emitter.emit('update', data);
+			this._socket.on('update', data => {
+				this.emit('update', data);
 			});
 
-			this.socket.on('disconnect', () => {
-				this.session = false;
-				this.connected = false;
-				this.emitter.emit('disconnect');
+			this._socket.on('disconnect', () => {
+				this._session = false;
+				this._connected = false;
+				this.emit('disconnect');
 			});
 		}
 	}
 
 	close() {
-		this.socket.close();
-		this.socket = null;
+		this._socket.close();
+		this._socket = null;
 	}
 
 	request(name, data) {
-		if (this.session) {
-			return this.makeRequest(name, data);
+		if (this._session) {
+			return this._makeRequest(name, data);
 		}
 
-		return this.makeRequest('createSession', { 
-			projectId: this.projectId
+		return this._makeRequest('createSession', { 
+			projectId: this._projectId
 		}).then(() => {
-			this.session = true;
-			if (this.masterKey) {
-				return this.makeRequest('loginMaster', { masterKey: this.masterKey });
+			this._session = true;
+			if (name !== 'loginMaster' && this._masterKey) {
+				return this._makeRequest('loginMaster', { masterKey: this._masterKey });
 			}
 		}).then(() => {
-			return this.makeRequest(name, data);
+			return this._makeRequest(name, data);
 		});
 	}
 
-	makeRequest(name, data) {
-		let request = {
+	_makeRequest(name, data) {
+		const request = {
 			type: name
 		};
 
 		if (data) {
 			request.data = data;
 		}
-		
+
 		return new Promise((resolve, reject) => {
-			this.socket.emit('message', request, response => {
+			this._socket.emit('message', request, response => {
 				if (response.status === 'ok') {
 					resolve(response.data);
 				} else if (typeof response.data === 'string') {
 					throw new SkyGridException(response.data);
 				} else {
 					throw new ValidationException(response.data);
-				}
+				}				
 			});
 		});
 	}

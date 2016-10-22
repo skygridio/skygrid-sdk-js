@@ -18,7 +18,7 @@ export default class SubscriptionManager {
 
 		settings.subscriptionId = this._subscriptionCount++;
 
-		let sub = {
+		const sub = {
 			settings: settings,
 			callback: callback,
 			active: false
@@ -28,13 +28,17 @@ export default class SubscriptionManager {
 	}
 
 	removeSubscription(id) {
+		if (this._api) { 
+			return this._api.request('unsubscribe', { subscriptionId: id });
+		}
 
+		return Promise.reject();
 	}
 
-	raise(id, device, changes) {
-		let sub = this._subscriptions[id];
+	raise(id, changes, device) {
+		const sub = this._subscriptions[id];
 		if (sub) {
-			sub.callback(device, changes);
+			sub.callback(changes, device);
 		} else {
 			throw new SkyGridException('Subscription not found');
 		}
@@ -42,7 +46,7 @@ export default class SubscriptionManager {
 
 	requestSubscriptions() {
 		for (let id in this._subscriptions) {
-			let sub = this._subscriptions[id];
+			const sub = this._subscriptions[id];
 			if (sub.active === false) {
 				this._requestSubscription(sub);
 			}
@@ -56,23 +60,25 @@ export default class SubscriptionManager {
 	}
 
 	removeSubscriptions() {
-		let promises = [];
 		if (this._api) { 
-			for (let subId in this._subscriptions) {
-				let prom = this._api.request('unsubscribe', { subscriptionId: subId });
-				promises.push(prom);
-			}
+			const promises = this._subscriptions.map(subId => {
+				return this.removeSubscription(subId);
+			});
+
+			return Promise.all(promises).then(() => {
+				this._subscriptions = {};
+			});
 		}
 
-		return Promise.all(promises).then(() => {
-			this._subscriptions = {};
-		});
+		return Promise.reject();
 	}
 
 	_requestSubscription(sub) {
 		return this._api.request('subscribe', sub.settings).then(() => {
 			sub.active = true;
 			this._subscriptions[sub.settings.subscriptionId] = sub;
+		}).then(() => {
+			return sub.settings.subscriptionId;
 		});
 	}
 }
