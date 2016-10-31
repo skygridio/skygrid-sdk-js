@@ -1,4 +1,4 @@
 {
-	"source": "./dev",
+	"source": "./src",
 	"destination": "./docs"
 }
