@@ -60,10 +60,12 @@ export default class SubscriptionManager {
 	}
 
 	removeSubscriptions() {
-		if (this._api) { 
-			const promises = this._subscriptions.map(subId => {
-				return this.removeSubscription(subId);
-			});
+		if (this._api) {
+			const promises = [];
+
+			for (let s in this._subscriptions) {
+				promises.push(this._subscriptions[s].settings.subscriptionId);
+			}
 
 			return Promise.all(promises).then(() => {
 				this._subscriptions = {};

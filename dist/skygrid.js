@@ -2136,9 +2136,17 @@ var SubscriptionManager = function () {
 			var _this = this;
 
 			if (this._api) {
-				var promises = this._subscriptions.map(function (subId) {
-					return _this.removeSubscription(subId);
-				});
+				/*
+    const promises = this._subscriptions.map(subId => {
+    return this.removeSubscription(subId);
+    });*/
+
+				var promises = [];
+
+				for (var s in this._subscriptions) {
+					console.log(this._subscriptions[s].settings.subscriptionId);
+					promises.push(this._subscriptions[s].settings.subscriptionId);
+				}
 
 				return Promise.all(promises).then(function () {
 					_this._subscriptions = {};
