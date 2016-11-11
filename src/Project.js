@@ -1,17 +1,19 @@
-import SocketApi from './SocketApi';
+import SocketIoApi from './SocketIoApi';
 import RestApi from './RestApi';
 import Device from './Device';
 import Schema from './Schema';
 import User from './User';
 import SubscriptionManager from './SubscriptionManager';
 import SkyGridException from './SkyGridException';
+import SkyGridObject from './SkyGridObject';
+import * as Util from './Util';
 
-const API_URL = 'https://api.skygrid.io';
+const API_URL = process.env.SKYGRID_SERVER_ADDRESS || 'https://api.skygrid.io';
 
 function parseSettings(settings) {
 	settings = settings || {};
 	if (!settings.api) {
-		settings.api = 'websocket';
+		settings.api = 'socketio';
 	}
 
 	if (!settings.address) {
@@ -24,7 +26,7 @@ function parseSettings(settings) {
 /**
  * Represents a project in the SkyGrid system.
  */
-export default class Project {
+export default class Project extends SkyGridObject {
 	/**
 	 * [constructor description]
 	 * @param  {[type]} projectId [description]
@@ -33,21 +35,28 @@ export default class Project {
 	 * @private
 	 */
 	constructor(projectId, settings) {
+		super();
+
 		settings = parseSettings(settings);
 
 		switch (settings.api) {
 			case 'rest': 
 				this._api = new RestApi(settings.address, projectId);
 				break;
-			case 'websocket': 
-				this._api = new SocketApi(settings.address, projectId);
+			case 'socketio': 
+				this._api = new SocketIoApi(settings.address, projectId);
 				break;
 		}
 
 		this._projectId = projectId;
-		this._subscriptionManager = new SubscriptionManager(this._api);
-		this._subscriptions = {};
 		this._serverTime = 0;
+
+		this._subManager = new SubscriptionManager(this._api);
+		this._subCallbacks = {};
+		this._subCount = 0;
+		this._serverSubId = null;
+
+		this._data = { id: projectId };
 		
 		this._setupListeners();
 
@@ -55,8 +64,44 @@ export default class Project {
 		this.fetchServerTime();
 	}
 
-	get id() {
-		return this._projectId;
+	/**
+	 * Gets the name of this project.
+	 * @returns {string} The name of this project, if a name has been set.  Otherwise returns null.
+	 */
+	get name() {
+		this._getProperty('name');
+	}
+
+	/**
+	 * Sets the name of this project.
+	 * @param {string} value - The name of the project.
+	 */
+	set name(value) {
+		this._setProperty('name', value);
+	}
+
+	get allowSignup() {
+		this._getProperty('allowSignup');
+	}
+
+	set allowSignup(value) {
+		this._setProperty('allowSignup', value);
+	}
+
+	/**
+	 * Gets the Access-Control-List (ACL) associated with this project.
+	 * @returns {Acl} The ACL associated with this project.
+	 */
+	get acl() {
+		this._getAclProperty();
+	}
+
+	/**
+	 * Sets the Access-Control-List (ACL) associated with this project.
+	 * @param {object|Acl} value - The ACL object.
+	 */
+	set acl(value) {
+		this._setAclProperty(value);
 	}
 
 	/**
@@ -95,7 +140,7 @@ export default class Project {
 	 * Logs in as the specified user.
 	 * @param  {string} email    Email of the user to log in as
 	 * @param  {string} password Password of the user
-	 * @returns {Promise}         A promise that resolves once the user has been logged in.
+	 * @returns {Promise}        A promise that resolves once the user has been logged in.
 	 */
 	login(email, password) {
 		return this._api.request('login', { 
@@ -148,8 +193,8 @@ export default class Project {
 
 	/**
 	 * Finds users that adhere to the specified constraints.
-	 * @param  {object}  [constraints] The constraints to apply to the search.
-	 * @param  {Boolean} [fetch]	Determines whether the full user object should be fetched, or just the description.  Defaults to true.
+	 * @param  {object}  [constraints] 	The constraints to apply to the search.
+	 * @param  {Boolean} [fetch]		Determines whether the full user object should be fetched, or just the description.  Defaults to true.
 	 * @returns {Promise<User, SkyGridException>} A promise that resolves to an array of all users that were found.
 	 */
 	users(constraints, fetch = true) {
@@ -185,8 +230,8 @@ export default class Project {
 
 	/**
 	 * Finds schemas that adhere to the specified constraints.
-	 * @param  {object}  [constraints] The constraints to apply to the search.
-	 * @param  {Boolean} [fetch]	Determines whether the full schema object should be fetched, or just the description.  Defaults to true.
+	 * @param  {object}  [constraints] 	The constraints to apply to the search.
+	 * @param  {Boolean} [fetch]		Determines whether the full schema object should be fetched, or just the description.  Defaults to true.
 	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to an array of all schemas that were found.
 	 */
 	schemas(constraints, fetch = true) {
@@ -227,14 +272,14 @@ export default class Project {
 	device(deviceId) {
 		return new Device({
 			api: this._api,
-			subscriptionManager: this._subscriptionManager
+			subscriptionManager: this._subManager
 		}, deviceId);
 	}
 
 	/**
 	 * Finds devices that adhere to the specified constraints.
-	 * @param  {object}  [constraints] The constraints to apply to the search.
-	 * @param  {Boolean} [fetch]	Determines whether the full device object should be fetched, or just the description.  Defaults to true.
+	 * @param  {object}  [constraints] 	The constraints to apply to the search.
+	 * @param  {Boolean} [fetch]		Determines whether the full device object should be fetched, or just the description.  Defaults to true.
 	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to an array of all devices that were found.
 	 */
 	devices(constraints, fetch = true) {
@@ -248,12 +293,117 @@ export default class Project {
 		});
 	}
 
-	subscribe(settings, callback) {
-		this._subscriptionManager.addSubscription(settings, callback);
+	/**
+	 * Fetches the current state of this project.
+	 * @returns {Promise<Project, SkyGridException>} A promise that resolves to this instance of the project.
+	 *
+	 * @example
+	 * project.fetch().then(() => {
+	 *	   // Project state has been successfully fetched
+	 * }).catch(err => {
+	 *     // Handle errors here
+	 * });
+	 */
+	fetch() {
+		return this._fetch('fetchProject', { 
+			deviceId: this.id 
+		});
 	}
 
-	removeSubscriptions() {
-		return this._subscriptionManager.removeSubscriptions();
+	/**
+	 * Saves the changes that have been made to the device to the SkyGrid server.
+	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
+	 */
+	save() {
+		if (this._api.usingMasterKey !== true) {
+			throw new SkyGridException('Can only edit users when using the master key');
+		}
+
+		return this._saveChanges({
+			default: {
+				projectId: this.id
+			},
+			requestName: 'updateDevice',
+			fields: ['name', 'allowSignup'],
+			hasAcl: true
+		});
+	}
+
+	/**
+	 * Subscribes to all changes made to devices belonging to this project via the SkyGrid back end.
+	 *   
+	 * NOTE: Subscribing is currently only available when using socket based communication methods.
+	 * 
+	 * @param  {Function} [callback] Optional callback that is raised when an update is received.
+	 * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
+	 *
+	 * @example
+	 * device.subscribe();
+	 *
+	 * @example
+	 * project.subscribe((device, changes) => {
+	 *     changes.map(change => {
+	 *         console.log(change, device.get(change));
+	 *     });
+	 * });
+	 */
+	subscribe(settings, callback) {
+		return Promise.resolve().then(() => {
+			if (this._serverSubId === null) {
+				return this._subManager.addSubscription({
+					projectId: this.id
+				}, 
+				(changes, device) => {
+					for (let key in this._subCallbacks) {
+						const subCallback = this._subCallbacks[key];
+						subCallback(changes, device);
+					}
+				}).then(serverSubId => {
+					this._serverSubId = serverSubId;
+				});
+			}
+		}).then(() => {
+			const id = this._subCount++;
+			this._subCallbacks[id] = callback;
+			return id;
+		});
+	}
+
+	/**
+	 * Unsubscribes the specified ID or callback from this project.
+	 * If no ID or callback is specified, all subscriptions are removed.
+	 * @param  {Number|Function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
+	 * @return {Promise} A promise that resolves once the subscription has been removed.
+	 */
+	unsubscribe(id) {
+		if (id) {
+			if (typeof id === 'function') {
+				id = this._findSubId(id);
+				if (id === null) {
+					throw new SkyGridException('Subscription does not exist');
+				}
+			}
+
+			if (this._subCallbacks[id] === undefined) {
+				throw new SkyGridException('Subscription does not exist');
+			}
+
+			delete this._subCallbacks[id];
+		} else {
+			this._subCallbacks = {};
+		}
+
+		if (Util.objectEmpty(this._subCallbacks)) {
+			return this._subManager.removeSubscription(this._subId).then(() => {
+				this._subId = null;
+			});
+		}
+
+		return Promise.resolve();
+	}
+
+	unsubscribeAll(id) {
+		return this._subManager.removeSubscriptions();
 	}
 
 	close() {
@@ -269,16 +419,16 @@ export default class Project {
 
 	_setupListeners() {
 		this._api.on('connect', () => {
-			this._subscriptionManager.requestSubscriptions();
+			this._subManager.requestSubscriptions();
 		});
 
 		this._api.on('update', message => {
 			const device = this.device(message.device);
-			this._subscriptionManager.raise(message.id, message.changes, device);
+			this._subManager.raise(message.id, message.changes, device);
 		});
 
 		this._api.on('disconnect', () => {
-			this._subscriptionManager.invalidateSubscriptions();
+			this._subManager.invalidateSubscriptions();
 		});
 	}
 }

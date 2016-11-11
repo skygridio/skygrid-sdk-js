@@ -1,10 +1,11 @@
 import Acl from './Acl';
 import * as Util from './Util';
+import SkyGridObject from './SkyGridObject';
 
 /** 
  * Represents a device in the SkyGrid system.
  */
-export default class Device {
+export default class Device extends SkyGridObject {
 	/**
 	 * Create a device instance.  This should NEVER be called by the user.
 	 * To get actual device instances, use SkyGrid.device() or one of the find() functions.
@@ -17,15 +18,16 @@ export default class Device {
 			throw new Error('No device data/ID supplied');
 		}
 
+		super();
+
 		this._api = api.api;
 		this._subManager = api.subscriptionManager;
 		this._subCallbacks = {};
 		this._subCount = 0;
-		this._subId = null;
+		this._serverSubId = null;
 
-		this._changes = { properties: {} };
+		this._changeDefaults = { properties: {} };
 		this._fetched = false;
-		this._changed = false;
 
 		if (typeof data === 'object') {
 			Util.fixDataDates(data);
@@ -38,23 +40,11 @@ export default class Device {
 	}
 
 	/**
-	 * Gets the unique ID of this device.
-	 * @returns {string} The unique ID of this device.
-	 */
-	get id() {
-		return this._data.id;
-	}
-
-	/**
 	 * Gets the name of this device.
 	 * @returns {string} The name of this device, if a name has been set.  Otherwise returns null.
 	 */
 	get name() {
-		if (this._changes.name) {
-			return this._changes.name;
-		}
-
-		return this._data.name;
+		this._getProperty('name');
 	}
 
 	/**
@@ -62,8 +52,7 @@ export default class Device {
 	 * @param {string} value - The name of the device.
 	 */
 	set name(value) {
-		this._changes.name = value;
-		this._changed = true;
+		this._setProperty('name', value);
 	}
 
 	/**
@@ -95,8 +84,7 @@ export default class Device {
 			}
 		}
 
-		this._changes.acl = value;
-		this._changed = true;
+		this._setProperty('acl', value);
 	}
 
 	/**
@@ -104,11 +92,7 @@ export default class Device {
 	 * @returns {boolean} True if logging is currently enabled.
 	 */
 	get log() {
-		if (this._changes.log) {
-			return this._changes.log;
-		}
-
-		return this._data.log;
+		this._getProperty('log');
 	}
 
 	/**
@@ -116,24 +100,7 @@ export default class Device {
 	 * @param {boolean} value - True to enable logging.
 	 */
 	set log(value) {
-		this._changes.log = value;
-		this._changed = true;
-	}
-
-	/**
-	 * Gets a value deteremining whether this device is complete (has been fetched from the server).
-	 * @returns {boolean} true if the device is complete, otherwise false.
-	 */
-	get isComplete() {
-		return this._fetched === true;
-	}
-
-	/**
-	 * Gets a value deteremining whether unsaved changes have been made to this device.
-	 * @returns {boolean} True if the device has changes.
-	 */
-	get isDirty() {
-		return this._changed === true;
+		this._setProperty('log', value);
 	}
 
 	/**
@@ -226,23 +193,14 @@ export default class Device {
 			}
 		}
 
-		if (this._changed === true) {
-			let changes = Util.prepareChanges(this._changes, {
+		return this._saveChanges({
+			default: {
 				deviceId: this.id
-			});
-			
-			return this._api.request('updateDevice', changes).then(() => {
-				Util.mergeFields(this._data, this._changes, ['name', 'log', 'properties']);
-				Util.mergeAcl(this._data, this._changes);
-
-				this._changes = { properties: {} };
-				this._changed = false;
-
-				return this;
-			});
-		}
-
-		return Promise.resolve(this);
+			},
+			requestName: 'updateDevice',
+			fields: ['name', 'log', 'properties'],
+			hasAcl: true
+		});
 	}
 
 	/**
@@ -257,38 +215,15 @@ export default class Device {
 	 * });
 	 */
 	fetch() {
-		return this._api.request('fetchDevice', { 
+		return this._fetch('fetchDevice', { 
 			deviceId: this.id 
-		}).then(data => {
-			Util.fixDataDates(data);
-			this._data = data;
-			this._fetched = true;
+		}).then(() => {
+			Util.fixDataDates(this._data);
 			return this;
 		});
 	}
 
-	/**
-	 * Fetches the current state of this device if it has not been fetched yet.
-	 * 
-	 * NOTE: This will only fetch the device if it has not previously been fetched, and
-	 * does not take in to account changes that have happened to the device since it was last fetched.
-	 * 
-	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
-	 *
-	 * @example
-	 * device.fetchIfNeeded().then(() => {
-	 *	   // Device state has been successfully fetched
-	 * }).catch(err => {
-	 *     // Handle errors here
-	 * });
-	 */
-	fetchIfNeeded() {
-		if (this._fetched !== true) {
-			return this.fetch();
-		}
-
-		return Promise.resolve(this);
-	}
+	
 
 	/**
 	 * Retreives the logged history of this device.  Each history record stores the entire
@@ -382,7 +317,7 @@ export default class Device {
 	 * - Secondly, an optional callback can be passed to this method, which gets called
 	 *   every time a new update is received.
 	 *   
-	 * NOTE: Subscribing is currently only available when using the websocket communication method.
+	 * NOTE: Subscribing is currently only available when using socket based communication methods.
 	 * 
 	 * @param  {Function} [callback] Optional callback that is raised when an update is received.
 	 * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
@@ -406,7 +341,7 @@ export default class Device {
 	 */
 	subscribe(callback) {
 		return Promise.resolve().then(() => {
-			if (this._subId === null) {
+			if (this._serverSubId === null) {
 				return this._subManager.addSubscription({
 					deviceId: this.id
 				}, 
@@ -415,11 +350,11 @@ export default class Device {
 					this._fetched = true;
 
 					for (let key in this._subCallbacks) {
-						const callback = this._subCallbacks[key];
-						callback(changes, this);
+						const subCallback = this._subCallbacks[key];
+						subCallback(changes, this);
 					}
-				}).then(id => {
-					this._subId = id;
+				}).then(serverSubId => {
+					this._serverSubId = serverSubId;
 				});
 			}
 		}).then(() => {
@@ -436,44 +371,36 @@ export default class Device {
 	 * @return {Promise} A promise that resolves once the subscription has been removed.
 	 */
 	unsubscribe(id) {
-		return Promise.resolve().then(() => {
-			if (id) {
-				if (typeof id === 'function') {
-					id = this._findSubId(id);
-					if (id === null) {
-						throw new SkyGridException('Subscription does not exist');
-					}
-				}
-
-				if (this._subCallbacks[id] === undefined) {
+		if (id) {
+			if (typeof id === 'function') {
+				id = this._findSubId(id);
+				if (id === null) {
 					throw new SkyGridException('Subscription does not exist');
 				}
-
-				delete this._subCallbacks[id];
-			} else {
-				this._subCallbacks = {};
 			}
 
-			if (Util.objectEmpty(this._subCallbacks)) {
-				return this._subManager.removeSubscription(this._subId).then(() => {
-					this._subId = null;
-				});
+			if (this._subCallbacks[id] === undefined) {
+				throw new SkyGridException('Subscription does not exist');
 			}
-		});
-	}
 
-	/**
-	 * Discards all changes that have been applied since the device was last saved.
-	 * @returns {void}
-	 */
-	discardChanges() {
-		this._changes = { properties: {} };
+			delete this._subCallbacks[id];
+		} else {
+			this._subCallbacks = {};
+		}
+
+		if (Util.objectEmpty(this._subCallbacks)) {
+			return this._subManager.removeSubscription(this._serverSubId).then(() => {
+				this._serverSubId = null;
+			});
+		}
+		
+		return Promise.resolve();
 	}
 
 	_findSubId(callback) {
-		for (let key in this._subCallbacks) {
-			if (this._subCallbacks[key] === callback) {
-				return key;
+		for (let id in this._subCallbacks) {
+			if (this._subCallbacks[id] === callback) {
+				return id;
 			}
 		}
 

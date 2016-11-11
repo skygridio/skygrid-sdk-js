@@ -6,7 +6,7 @@ import io from 'socket.io-client';
 /**
  * @private
  */
-export default class SocketApi extends Api {
+export default class SocketIoApi extends Api {
 	constructor(address, projectId) {
 		super(); 
 		

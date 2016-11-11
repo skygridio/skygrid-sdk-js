@@ -1,10 +1,10 @@
-export default class User {
+import SkyGridObject from './SkyGridObject';
+
+export default class User extends SkyGridObject {
 	constructor(api, data) {
+		super();
+
 		this._api = api;
-		
-		this._changes = {};
-		this._fetched = false;
-		this._changed = false;
 
 		if (typeof data === 'object') {
 			this._data = data;
@@ -15,39 +15,24 @@ export default class User {
 		}
 	}
 
-	get id() {
-		return this._data.id;
-	}
-
 	get email() {
-		if (this._changes.email) {
-			return this._changes.email;
-		}
-
-		return this._data.email;
+		this._getProperty('email');
 	}
 
 	set email(value) {
-		this._changes.email = value;
-		this._changed = true;
+		this._setProperty('email', value);
 	}
 
 	get meta() {
-		if (this._changes.meta) {
-			return this._changes.meta;
-		}
-
-		return this._data.meta;
+		this._getProperty('meta');
 	}
 
 	set meta(value) {
-		this._changes.meta = value;
-		this._changed = true;
+		this._setProperty('meta', value);
 	}
 
 	set password(value) {
-		this._changes.password = value;
-		this._changed = true;
+		this._setProperty('password', value);
 	}
 
 	save() {
@@ -55,51 +40,22 @@ export default class User {
 			throw new SkyGridException('Can only edit users when using the master key');
 		}
 
-		if (this._changed === true) {
-			this._changes.userId = this.id;
-
-			return this._api.request('updateUser', this._changes).then(() => {
-				if (this._changes.email) {
-					this._data.email = this._changes.email;
-				}
-
-				if (this._changes.meta) {
-					this._data.meta = this._changes.meta;
-				}
-
-				this._changes = {};
-				this._changed = false;
-
-				return this;
-			});
-		}
-		
-		return Promise.resolve(this);
-	}
-
-	fetch() {
-		return this._api.request('fetchUser', { 
-			userId: this.id 
-		}).then(data => {
-			this._data = data;
-			this._fetched = true;
-			return this;
+		return this._saveChanges({
+			default: {
+				userId: this.id
+			},
+			requestName: 'updateUser',
+			fields: ['email', 'meta'],
 		});
 	}
 
-	fetchIfNeeded() {
-		if (this._fetched !== true) {
-			return this.fetch();
-		}
-
-		return Promise.resolve(this);
+	fetch() {
+		return this._fetch('fetchUser', { 
+			userId: this.id 
+		});
 	}
 
 	remove() {
 		return this._api.request('deleteUser', { userId: this.id });
-	}
-
-	discardChanges() {
-		this._changes = {};
 	}
 }

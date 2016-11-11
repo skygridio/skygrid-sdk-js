@@ -6,6 +6,14 @@ const uglify = require('gulp-uglify');
 const rm = require('gulp-rimraf');
 const browserify = require('browserify');
 const source = require('vinyl-source-stream');
+const envify = require('envify/custom');
+
+let addressEnv = null;
+process.argv.map((item, idx) => {
+	if (item === '--address') {
+		addressEnv = process.argv[idx + 1];
+	}
+});
 
 gulp.task('clean', function() {
 	return gulp.src(['lib/*', 'docs/*']).pipe(rm());
@@ -23,6 +31,9 @@ gulp.task('browserify', ['compile'], function() {
 	const stream = browserify({
 		entries: 'lib/Browser.js',
 	})
+	.transform(envify({
+		SKYGRID_SERVER_ADDRESS: addressEnv
+	}))
 	.bundle();
 
 	return stream.pipe(source('skygrid.js'))
@@ -34,6 +45,10 @@ gulp.task('minify', ['browserify'], function() {
 		.pipe(uglify())
 		.pipe(rename({ extname: '.min.js' }))
 		.pipe(gulp.dest('./dist'));
+});
+
+gulp.task('test', ['browserify'], function() {
+	
 });
 
 gulp.task('browser', ['browserify']);

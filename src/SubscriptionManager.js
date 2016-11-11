@@ -61,9 +61,10 @@ export default class SubscriptionManager {
 
 	removeSubscriptions() {
 		if (this._api) { 
-			const promises = this._subscriptions.map(subId => {
-				return this.removeSubscription(subId);
-			});
+			const promises = [];
+			for (let id in this._subscriptions) {
+				promises.push(this.removeSubscription(subId));
+			}
 
 			return Promise.all(promises).then(() => {
 				this._subscriptions = {};

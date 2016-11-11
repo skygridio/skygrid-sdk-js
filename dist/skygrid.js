@@ -194,7 +194,7 @@ var Acl = function () {
 exports.default = Acl;
 
 
-},{"./User":12,"./Util":13}],2:[function(require,module,exports){
+},{"./User":13,"./Util":14}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -231,7 +231,7 @@ var Api = function (_EventEmitter) {
 exports.default = Api;
 
 
-},{"events":41}],3:[function(require,module,exports){
+},{"events":42}],3:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -274,16 +274,26 @@ var _Util = require('./Util');
 
 var Util = _interopRequireWildcard(_Util);
 
+var _SkyGridObject2 = require('./SkyGridObject');
+
+var _SkyGridObject3 = _interopRequireDefault(_SkyGridObject2);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 /** 
  * Represents a device in the SkyGrid system.
  */
-var Device = function () {
+var Device = function (_SkyGridObject) {
+	_inherits(Device, _SkyGridObject);
+
 	/**
   * Create a device instance.  This should NEVER be called by the user.
   * To get actual device instances, use SkyGrid.device() or one of the find() functions.
@@ -298,28 +308,30 @@ var Device = function () {
 			throw new Error('No device data/ID supplied');
 		}
 
-		this._api = api.api;
-		this._subManager = api.subscriptionManager;
-		this._subCallbacks = {};
-		this._subCount = 0;
-		this._subId = null;
+		var _this = _possibleConstructorReturn(this, (Device.__proto__ || Object.getPrototypeOf(Device)).call(this));
 
-		this._changes = { properties: {} };
-		this._fetched = false;
-		this._changed = false;
+		_this._api = api.api;
+		_this._subManager = api.subscriptionManager;
+		_this._subCallbacks = {};
+		_this._subCount = 0;
+		_this._serverSubId = null;
+
+		_this._changeDefaults = { properties: {} };
+		_this._fetched = false;
 
 		if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
 			Util.fixDataDates(data);
-			this._data = data;
-			this._fetched = !!data.properties;
+			_this._data = data;
+			_this._fetched = !!data.properties;
 		} else if (typeof data === 'string') {
-			this._data = { id: data, properties: {} };
+			_this._data = { id: data, properties: {} };
 		}
+		return _this;
 	}
 
 	/**
-  * Gets the unique ID of this device.
-  * @returns {string} The unique ID of this device.
+  * Gets the name of this device.
+  * @returns {string} The name of this device, if a name has been set.  Otherwise returns null.
   */
 
 
@@ -380,8 +392,6 @@ var Device = function () {
 	}, {
 		key: 'save',
 		value: function save(properties) {
-			var _this = this;
-
 			if (properties) {
 				for (var key in properties) {
 					this._changes.properties[key] = properties[key];
@@ -389,23 +399,14 @@ var Device = function () {
 				}
 			}
 
-			if (this._changed === true) {
-				var changes = Util.prepareChanges(this._changes, {
+			return this._saveChanges({
+				default: {
 					deviceId: this.id
-				});
-
-				return this._api.request('updateDevice', changes).then(function () {
-					Util.mergeFields(_this._data, _this._changes, ['name', 'log', 'properties']);
-					Util.mergeAcl(_this._data, _this._changes);
-
-					_this._changes = { properties: {} };
-					_this._changed = false;
-
-					return _this;
-				});
-			}
-
-			return Promise.resolve(this);
+				},
+				requestName: 'updateDevice',
+				fields: ['name', 'log', 'properties'],
+				hasAcl: true
+			});
 		}
 
 		/**
@@ -425,40 +426,12 @@ var Device = function () {
 		value: function fetch() {
 			var _this2 = this;
 
-			return this._api.request('fetchDevice', {
+			return this._fetch('fetchDevice', {
 				deviceId: this.id
-			}).then(function (data) {
-				Util.fixDataDates(data);
-				_this2._data = data;
-				_this2._fetched = true;
+			}).then(function () {
+				Util.fixDataDates(_this2._data);
 				return _this2;
 			});
-		}
-
-		/**
-   * Fetches the current state of this device if it has not been fetched yet.
-   * 
-   * NOTE: This will only fetch the device if it has not previously been fetched, and
-   * does not take in to account changes that have happened to the device since it was last fetched.
-   * 
-   * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
-   *
-   * @example
-   * device.fetchIfNeeded().then(() => {
-   *	   // Device state has been successfully fetched
-   * }).catch(err => {
-   *     // Handle errors here
-   * });
-   */
-
-	}, {
-		key: 'fetchIfNeeded',
-		value: function fetchIfNeeded() {
-			if (this._fetched !== true) {
-				return this.fetch();
-			}
-
-			return Promise.resolve(this);
 		}
 
 		/**
@@ -560,7 +533,7 @@ var Device = function () {
    * - Secondly, an optional callback can be passed to this method, which gets called
    *   every time a new update is received.
    *   
-   * NOTE: Subscribing is currently only available when using the websocket communication method.
+   * NOTE: Subscribing is currently only available when using socket based communication methods.
    * 
    * @param  {Function} [callback] Optional callback that is raised when an update is received.
    * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
@@ -589,7 +562,7 @@ var Device = function () {
 			var _this3 = this;
 
 			return Promise.resolve().then(function () {
-				if (_this3._subId === null) {
+				if (_this3._serverSubId === null) {
 					return _this3._subManager.addSubscription({
 						deviceId: _this3.id
 					}, function (changes, device) {
@@ -597,11 +570,11 @@ var Device = function () {
 						_this3._fetched = true;
 
 						for (var key in _this3._subCallbacks) {
-							var _callback = _this3._subCallbacks[key];
-							_callback(changes, _this3);
+							var subCallback = _this3._subCallbacks[key];
+							subCallback(changes, _this3);
 						}
-					}).then(function (id) {
-						_this3._subId = id;
+					}).then(function (serverSubId) {
+						_this3._serverSubId = serverSubId;
 					});
 				}
 			}).then(function () {
@@ -623,72 +596,46 @@ var Device = function () {
 		value: function unsubscribe(id) {
 			var _this4 = this;
 
-			return Promise.resolve().then(function () {
-				if (id) {
-					if (typeof id === 'function') {
-						id = _this4._findSubId(id);
-						if (id === null) {
-							throw new SkyGridException('Subscription does not exist');
-						}
-					}
-
-					if (_this4._subCallbacks[id] === undefined) {
+			if (id) {
+				if (typeof id === 'function') {
+					id = this._findSubId(id);
+					if (id === null) {
 						throw new SkyGridException('Subscription does not exist');
 					}
-
-					delete _this4._subCallbacks[id];
-				} else {
-					_this4._subCallbacks = {};
 				}
 
-				if (Util.objectEmpty(_this4._subCallbacks)) {
-					return _this4._subManager.removeSubscription(_this4._subId).then(function () {
-						_this4._subId = null;
-					});
+				if (this._subCallbacks[id] === undefined) {
+					throw new SkyGridException('Subscription does not exist');
 				}
-			});
-		}
 
-		/**
-   * Discards all changes that have been applied since the device was last saved.
-   * @returns {void}
-   */
+				delete this._subCallbacks[id];
+			} else {
+				this._subCallbacks = {};
+			}
 
-	}, {
-		key: 'discardChanges',
-		value: function discardChanges() {
-			this._changes = { properties: {} };
+			if (Util.objectEmpty(this._subCallbacks)) {
+				return this._subManager.removeSubscription(this._serverSubId).then(function () {
+					_this4._serverSubId = null;
+				});
+			}
+
+			return Promise.resolve();
 		}
 	}, {
 		key: '_findSubId',
 		value: function _findSubId(callback) {
-			for (var key in this._subCallbacks) {
-				if (this._subCallbacks[key] === callback) {
-					return key;
+			for (var id in this._subCallbacks) {
+				if (this._subCallbacks[id] === callback) {
+					return id;
 				}
 			}
 
 			return null;
 		}
 	}, {
-		key: 'id',
-		get: function get() {
-			return this._data.id;
-		}
-
-		/**
-   * Gets the name of this device.
-   * @returns {string} The name of this device, if a name has been set.  Otherwise returns null.
-   */
-
-	}, {
 		key: 'name',
 		get: function get() {
-			if (this._changes.name) {
-				return this._changes.name;
-			}
-
-			return this._data.name;
+			this._getProperty('name');
 		}
 
 		/**
@@ -697,8 +644,7 @@ var Device = function () {
    */
 		,
 		set: function set(value) {
-			this._changes.name = value;
-			this._changed = true;
+			this._setProperty('name', value);
 		}
 
 		/**
@@ -734,8 +680,7 @@ var Device = function () {
 				}
 			}
 
-			this._changes.acl = value;
-			this._changed = true;
+			this._setProperty('acl', value);
 		}
 
 		/**
@@ -746,11 +691,7 @@ var Device = function () {
 	}, {
 		key: 'log',
 		get: function get() {
-			if (this._changes.log) {
-				return this._changes.log;
-			}
-
-			return this._data.log;
+			this._getProperty('log');
 		}
 
 		/**
@@ -759,30 +700,7 @@ var Device = function () {
    */
 		,
 		set: function set(value) {
-			this._changes.log = value;
-			this._changed = true;
-		}
-
-		/**
-   * Gets a value deteremining whether this device is complete (has been fetched from the server).
-   * @returns {boolean} true if the device is complete, otherwise false.
-   */
-
-	}, {
-		key: 'isComplete',
-		get: function get() {
-			return this._fetched === true;
-		}
-
-		/**
-   * Gets a value deteremining whether unsaved changes have been made to this device.
-   * @returns {boolean} True if the device has changes.
-   */
-
-	}, {
-		key: 'isDirty',
-		get: function get() {
-			return this._changed === true;
+			this._setProperty('log', value);
 		}
 
 		/**
@@ -835,12 +753,12 @@ var Device = function () {
 	}]);
 
 	return Device;
-}();
+}(_SkyGridObject3.default);
 
 exports.default = Device;
 
 
-},{"./Acl":1,"./Util":13}],5:[function(require,module,exports){
+},{"./Acl":1,"./SkyGridObject":10,"./Util":14}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -851,9 +769,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _SocketApi = require('./SocketApi');
+var _SocketIoApi = require('./SocketIoApi');
 
-var _SocketApi2 = _interopRequireDefault(_SocketApi);
+var _SocketIoApi2 = _interopRequireDefault(_SocketIoApi);
 
 var _RestApi = require('./RestApi');
 
@@ -879,16 +797,30 @@ var _SkyGridException = require('./SkyGridException');
 
 var _SkyGridException2 = _interopRequireDefault(_SkyGridException);
 
+var _SkyGridObject2 = require('./SkyGridObject');
+
+var _SkyGridObject3 = _interopRequireDefault(_SkyGridObject2);
+
+var _Util = require('./Util');
+
+var Util = _interopRequireWildcard(_Util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var API_URL = 'https://api.skygrid.io';
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var API_URL = null || 'https://api.skygrid.io';
 
 function parseSettings(settings) {
 	settings = settings || {};
 	if (!settings.api) {
-		settings.api = 'websocket';
+		settings.api = 'socketio';
 	}
 
 	if (!settings.address) {
@@ -902,7 +834,9 @@ function parseSettings(settings) {
  * Represents a project in the SkyGrid system.
  */
 
-var Project = function () {
+var Project = function (_SkyGridObject) {
+	_inherits(Project, _SkyGridObject);
+
 	/**
   * [constructor description]
   * @param  {[type]} projectId [description]
@@ -911,33 +845,45 @@ var Project = function () {
   * @private
   */
 	function Project(projectId, settings) {
-		var _this = this;
-
 		_classCallCheck(this, Project);
+
+		var _this = _possibleConstructorReturn(this, (Project.__proto__ || Object.getPrototypeOf(Project)).call(this));
 
 		settings = parseSettings(settings);
 
 		switch (settings.api) {
 			case 'rest':
-				this._api = new _RestApi2.default(settings.address, projectId);
+				_this._api = new _RestApi2.default(settings.address, projectId);
 				break;
-			case 'websocket':
-				this._api = new _SocketApi2.default(settings.address, projectId);
+			case 'socketio':
+				_this._api = new _SocketIoApi2.default(settings.address, projectId);
 				break;
 		}
 
-		this._projectId = projectId;
-		this._subscriptionManager = new _SubscriptionManager2.default(this._api);
-		this._subscriptions = {};
-		this._serverTime = 0;
+		_this._projectId = projectId;
+		_this._serverTime = 0;
 
-		this._setupListeners();
+		_this._subManager = new _SubscriptionManager2.default(_this._api);
+		_this._subCallbacks = {};
+		_this._subCount = 0;
+		_this._serverSubId = null;
 
-		this._timeInterval = setInterval(function () {
+		_this._data = { id: projectId };
+
+		_this._setupListeners();
+
+		_this._timeInterval = setInterval(function () {
 			_this.fetchServerTime();
 		}, 30000);
-		this.fetchServerTime();
+		_this.fetchServerTime();
+		return _this;
 	}
+
+	/**
+  * Gets the name of this project.
+  * @returns {string} The name of this project, if a name has been set.  Otherwise returns null.
+  */
+
 
 	_createClass(Project, [{
 		key: 'fetchServerTime',
@@ -976,7 +922,7 @@ var Project = function () {
    * Logs in as the specified user.
    * @param  {string} email    Email of the user to log in as
    * @param  {string} password Password of the user
-   * @returns {Promise}         A promise that resolves once the user has been logged in.
+   * @returns {Promise}        A promise that resolves once the user has been logged in.
    */
 
 	}, {
@@ -1047,8 +993,8 @@ var Project = function () {
 
 		/**
    * Finds users that adhere to the specified constraints.
-   * @param  {object}  [constraints] The constraints to apply to the search.
-   * @param  {Boolean} [fetch]	Determines whether the full user object should be fetched, or just the description.  Defaults to true.
+   * @param  {object}  [constraints] 	The constraints to apply to the search.
+   * @param  {Boolean} [fetch]		Determines whether the full user object should be fetched, or just the description.  Defaults to true.
    * @returns {Promise<User, SkyGridException>} A promise that resolves to an array of all users that were found.
    */
 
@@ -1099,8 +1045,8 @@ var Project = function () {
 
 		/**
    * Finds schemas that adhere to the specified constraints.
-   * @param  {object}  [constraints] The constraints to apply to the search.
-   * @param  {Boolean} [fetch]	Determines whether the full schema object should be fetched, or just the description.  Defaults to true.
+   * @param  {object}  [constraints] 	The constraints to apply to the search.
+   * @param  {Boolean} [fetch]		Determines whether the full schema object should be fetched, or just the description.  Defaults to true.
    * @returns {Promise<Schema, SkyGridException>} A promise that resolves to an array of all schemas that were found.
    */
 
@@ -1156,14 +1102,14 @@ var Project = function () {
 		value: function device(deviceId) {
 			return new _Device2.default({
 				api: this._api,
-				subscriptionManager: this._subscriptionManager
+				subscriptionManager: this._subManager
 			}, deviceId);
 		}
 
 		/**
    * Finds devices that adhere to the specified constraints.
-   * @param  {object}  [constraints] The constraints to apply to the search.
-   * @param  {Boolean} [fetch]	Determines whether the full device object should be fetched, or just the description.  Defaults to true.
+   * @param  {object}  [constraints] 	The constraints to apply to the search.
+   * @param  {Boolean} [fetch]		Determines whether the full device object should be fetched, or just the description.  Defaults to true.
    * @returns {Promise<Device, SkyGridException>} A promise that resolves to an array of all devices that were found.
    */
 
@@ -1183,52 +1129,208 @@ var Project = function () {
 				});
 			});
 		}
+
+		/**
+   * Fetches the current state of this project.
+   * @returns {Promise<Project, SkyGridException>} A promise that resolves to this instance of the project.
+   *
+   * @example
+   * project.fetch().then(() => {
+   *	   // Project state has been successfully fetched
+   * }).catch(err => {
+   *     // Handle errors here
+   * });
+   */
+
+	}, {
+		key: 'fetch',
+		value: function fetch() {
+			return this._fetch('fetchProject', {
+				deviceId: this.id
+			});
+		}
+
+		/**
+   * Saves the changes that have been made to the device to the SkyGrid server.
+   * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
+   */
+
+	}, {
+		key: 'save',
+		value: function save() {
+			if (this._api.usingMasterKey !== true) {
+				throw new _SkyGridException2.default('Can only edit users when using the master key');
+			}
+
+			return this._saveChanges({
+				default: {
+					projectId: this.id
+				},
+				requestName: 'updateDevice',
+				fields: ['name', 'allowSignup'],
+				hasAcl: true
+			});
+		}
+
+		/**
+   * Subscribes to all changes made to devices belonging to this project via the SkyGrid back end.
+   *   
+   * NOTE: Subscribing is currently only available when using socket based communication methods.
+   * 
+   * @param  {Function} [callback] Optional callback that is raised when an update is received.
+   * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
+   *
+   * @example
+   * device.subscribe();
+   *
+   * @example
+   * project.subscribe((device, changes) => {
+   *     changes.map(change => {
+   *         console.log(change, device.get(change));
+   *     });
+   * });
+   */
+
 	}, {
 		key: 'subscribe',
 		value: function subscribe(settings, callback) {
-			this._subscriptionManager.addSubscription(settings, callback);
+			var _this11 = this;
+
+			return Promise.resolve().then(function () {
+				if (_this11._serverSubId === null) {
+					return _this11._subManager.addSubscription({
+						projectId: _this11.id
+					}, function (changes, device) {
+						for (var key in _this11._subCallbacks) {
+							var subCallback = _this11._subCallbacks[key];
+							subCallback(changes, device);
+						}
+					}).then(function (serverSubId) {
+						_this11._serverSubId = serverSubId;
+					});
+				}
+			}).then(function () {
+				var id = _this11._subCount++;
+				_this11._subCallbacks[id] = callback;
+				return id;
+			});
+		}
+
+		/**
+   * Unsubscribes the specified ID or callback from this project.
+   * If no ID or callback is specified, all subscriptions are removed.
+   * @param  {Number|Function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
+   * @return {Promise} A promise that resolves once the subscription has been removed.
+   */
+
+	}, {
+		key: 'unsubscribe',
+		value: function unsubscribe(id) {
+			var _this12 = this;
+
+			if (id) {
+				if (typeof id === 'function') {
+					id = this._findSubId(id);
+					if (id === null) {
+						throw new _SkyGridException2.default('Subscription does not exist');
+					}
+				}
+
+				if (this._subCallbacks[id] === undefined) {
+					throw new _SkyGridException2.default('Subscription does not exist');
+				}
+
+				delete this._subCallbacks[id];
+			} else {
+				this._subCallbacks = {};
+			}
+
+			if (Util.objectEmpty(this._subCallbacks)) {
+				return this._subManager.removeSubscription(this._subId).then(function () {
+					_this12._subId = null;
+				});
+			}
+
+			return Promise.resolve();
 		}
 	}, {
-		key: 'removeSubscriptions',
-		value: function removeSubscriptions() {
-			return this._subscriptionManager.removeSubscriptions();
+		key: 'unsubscribeAll',
+		value: function unsubscribeAll(id) {
+			return this._subManager.removeSubscriptions();
 		}
 	}, {
 		key: 'close',
 		value: function close() {
-			var _this11 = this;
+			var _this13 = this;
 
 			return this.removeSubscriptions().then(function () {
-				return _this11._api.close();
+				return _this13._api.close();
 			}).then(function () {
-				clearInterval(_this11._timeInterval);
-				_this11._projectId = null;
-				_this11._user = null;
-				_this11._timeInterval = null;
+				clearInterval(_this13._timeInterval);
+				_this13._projectId = null;
+				_this13._user = null;
+				_this13._timeInterval = null;
 			});
 		}
 	}, {
 		key: '_setupListeners',
 		value: function _setupListeners() {
-			var _this12 = this;
+			var _this14 = this;
 
 			this._api.on('connect', function () {
-				_this12._subscriptionManager.requestSubscriptions();
+				_this14._subManager.requestSubscriptions();
 			});
 
 			this._api.on('update', function (message) {
-				var device = _this12.device(message.device);
-				_this12._subscriptionManager.raise(message.id, message.changes, device);
+				var device = _this14.device(message.device);
+				_this14._subManager.raise(message.id, message.changes, device);
 			});
 
 			this._api.on('disconnect', function () {
-				_this12._subscriptionManager.invalidateSubscriptions();
+				_this14._subManager.invalidateSubscriptions();
 			});
 		}
 	}, {
-		key: 'id',
+		key: 'name',
 		get: function get() {
-			return this._projectId;
+			this._getProperty('name');
+		}
+
+		/**
+   * Sets the name of this project.
+   * @param {string} value - The name of the project.
+   */
+		,
+		set: function set(value) {
+			this._setProperty('name', value);
+		}
+	}, {
+		key: 'allowSignup',
+		get: function get() {
+			this._getProperty('allowSignup');
+		},
+		set: function set(value) {
+			this._setProperty('allowSignup', value);
+		}
+
+		/**
+   * Gets the Access-Control-List (ACL) associated with this project.
+   * @returns {Acl} The ACL associated with this project.
+   */
+
+	}, {
+		key: 'acl',
+		get: function get() {
+			this._getAclProperty();
+		}
+
+		/**
+   * Sets the Access-Control-List (ACL) associated with this project.
+   * @param {object|Acl} value - The ACL object.
+   */
+		,
+		set: function set(value) {
+			this._setAclProperty(value);
 		}
 
 		/**
@@ -1244,12 +1346,12 @@ var Project = function () {
 	}]);
 
 	return Project;
-}();
+}(_SkyGridObject3.default);
 
 exports.default = Project;
 
 
-},{"./Device":4,"./RestApi":6,"./Schema":7,"./SkyGridException":9,"./SocketApi":10,"./SubscriptionManager":11,"./User":12}],6:[function(require,module,exports){
+},{"./Device":4,"./RestApi":6,"./Schema":7,"./SkyGridException":9,"./SkyGridObject":10,"./SocketIoApi":11,"./SubscriptionManager":12,"./User":13,"./Util":14}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1478,16 +1580,26 @@ var _Util = require('./Util');
 
 var Util = _interopRequireWildcard(_Util);
 
+var _SkyGridObject2 = require('./SkyGridObject');
+
+var _SkyGridObject3 = _interopRequireDefault(_SkyGridObject2);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 /**
  * Represents a device schema in the SkyGrid system.
  */
-var Schema = function () {
+var Schema = function (_SkyGridObject) {
+	_inherits(Schema, _SkyGridObject);
+
 	/**
   * Create a schema instance.  This should NEVER be called by the user.
   * To get actual schema instances, use SkyGrid.schema() or one of the find() functions.
@@ -1502,24 +1614,25 @@ var Schema = function () {
 			throw new Error('No schema data/ID supplied');
 		}
 
-		this._api = api;
-		this._data = data;
+		var _this = _possibleConstructorReturn(this, (Schema.__proto__ || Object.getPrototypeOf(Schema)).call(this));
 
-		this._changes = { properties: {} };
-		this._fetched = false;
-		this._changed = false;
+		_this._api = api;
+		_this._changeDefaults = { properties: {} };
 
 		if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
-			this._data = data;
-			this._fetched = !!data.properties;
+			_this._data = data;
+			_this._fetched = !!data.properties;
 		} else if (typeof data === 'string') {
-			this._data = { id: data, properties: {} };
+			_this._data = { id: data, properties: {} };
+		} else {
+			throw new Error('Schema data is of an unknown type');
 		}
+		return _this;
 	}
 
 	/**
-  * Gets the unique ID of this schema.
-  * @returns {string} The unique ID of this schema.
+  * Sets the name of this schema.
+  * @param {string} value - The name of the schema.
   */
 
 
@@ -1603,7 +1716,7 @@ var Schema = function () {
 	}, {
 		key: 'removeProperty',
 		value: function removeProperty(name) {
-			this._changes[name] = null;
+			this._changes.properties[name] = null;
 			this._changed = true;
 		}
 
@@ -1616,29 +1729,18 @@ var Schema = function () {
 	}, {
 		key: 'save',
 		value: function save() {
-			var _this = this;
-
 			if (this._api.usingMasterKey !== true) {
-				throw new SkyGridException('Can only edit users when using the master key');
+				throw new SkyGridException('Can only edit schemas when using the master key');
 			}
 
-			if (this._changed === true) {
-				var changes = Util.prepareChanges(this._changes, {
+			return this._saveChanges({
+				default: {
 					schemaId: this.id
-				});
-
-				return this._api.request('updateDeviceSchema', changes).then(function () {
-					Util.mergeFields(_this._data, _this._changes, ['name', 'description', 'properties']);
-					Util.mergeAcl(_this._data, _this._changes);
-
-					_this._changes = { properties: {} };
-					_this._changed = false;
-
-					return _this;
-				});
-			}
-
-			return Promise.resolve(this);
+				},
+				requestName: 'updateDeviceSchema',
+				fields: ['name', 'description', 'properties'],
+				hasAcl: true
+			});
 		}
 
 		/**
@@ -1656,37 +1758,9 @@ var Schema = function () {
 	}, {
 		key: 'fetch',
 		value: function fetch() {
-			var _this2 = this;
-
-			return this._api.request('fetchDeviceSchema', {
+			return this._fetch('fetchDeviceSchema', {
 				schemaId: this.id
-			}).then(function (data) {
-				_this2._data = data;
-				_this2._fetched = true;
-				return _this2;
 			});
-		}
-
-		/**
-   * Fetches the schema from the SkyGrid backend if it has not yet been fetched.
-   * @returns {Promise<Schema, SkyGridException>} A promise that resolves to this instance of the schema.
-   *
-   * @example
-   * schema.fetchIfNeeded().then(() => {
-   *	   // Schema state has been successfully fetched
-   * }).catch(err => {
-   *     // Handle errors here
-   * });
-   */
-
-	}, {
-		key: 'fetchIfNeeded',
-		value: function fetchIfNeeded() {
-			if (this._fetched !== true) {
-				return this.fetch();
-			}
-
-			return Promise.resolve(this);
 		}
 
 		/**
@@ -1712,37 +1786,10 @@ var Schema = function () {
 		value: function remove() {
 			return this._api.request('deleteDeviceSchema', { schemaId: this.id });
 		}
-
-		/**
-   * Discards all changes that have been applied since the schema was last saved.
-   * @returns {void}
-   * @private
-   */
-
-	}, {
-		key: 'discardChanges',
-		value: function discardChanges() {
-			this._changes = { properties: {} };
-		}
-	}, {
-		key: 'id',
-		get: function get() {
-			return this._data.id;
-		}
-
-		/**
-   * Sets the name of this schema.
-   * @param {string} value - The name of the schema.
-   */
-
 	}, {
 		key: 'name',
 		get: function get() {
-			if (this._changes.name) {
-				return this._changes.name;
-			}
-
-			return this._data.name;
+			this._getProperty('name');
 		}
 
 		/**
@@ -1751,8 +1798,7 @@ var Schema = function () {
    */
 		,
 		set: function set(value) {
-			this._changes.name = value;
-			this._changed = true;
+			this._setProperty('name');
 		}
 
 		/**
@@ -1763,11 +1809,7 @@ var Schema = function () {
 	}, {
 		key: 'description',
 		get: function get() {
-			if (this._changes.description) {
-				return this._changes.description;
-			}
-
-			return this._data.description;
+			this._getProperty('description');
 		}
 
 		/**
@@ -1777,8 +1819,7 @@ var Schema = function () {
    */
 		,
 		set: function set(value) {
-			this._changes.description = value;
-			this._changed = true;
+			this._setProperty('description');
 		}
 
 		/**
@@ -1790,17 +1831,7 @@ var Schema = function () {
 	}, {
 		key: 'acl',
 		get: function get() {
-			if (!this._changes.acl) {
-				if (this._data.acl) {
-					this._changes.acl = new _Acl2.default(this._data.acl);
-				} else {
-					this._changes.acl = new _Acl2.default();
-				}
-
-				this._changed = true;
-			}
-
-			return this._changes.acl;
+			return this._getAclProperty();
 		}
 
 		/**
@@ -1809,37 +1840,7 @@ var Schema = function () {
    */
 		,
 		set: function set(value) {
-			if (value && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
-				if (!(value instanceof _Acl2.default)) {
-					value = new _Acl2.default(value);
-				}
-			}
-
-			this._changes.acl = value;
-			this._changed = true;
-		}
-
-		/**
-   * Gets a value deteremining whether this class is complete (has been fetched from the server).
-   * @returns {boolean} True if the schema has been fetched.
-   */
-
-	}, {
-		key: 'isComplete',
-		get: function get() {
-			return this._fetched !== true;
-		}
-
-		/**
-   * Gets a value deteremining whether unsaved changes have been made to this schema.
-   * @returns {boolean} True if the schema has unsaved changes.
-   * @private
-   */
-
-	}, {
-		key: 'isDirty',
-		get: function get() {
-			return this._changed === true;
+			this._setAclProperty(value);
 		}
 
 		/**
@@ -1860,12 +1861,12 @@ var Schema = function () {
 	}]);
 
 	return Schema;
-}();
+}(_SkyGridObject3.default);
 
 exports.default = Schema;
 
 
-},{"./Acl":1,"./Util":13}],8:[function(require,module,exports){
+},{"./Acl":1,"./SkyGridObject":10,"./Util":14}],8:[function(require,module,exports){
 'use strict';
 
 var Project = require('./Project');
@@ -1922,6 +1923,199 @@ Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Util = require('./Util');
+
+var Util = _interopRequireWildcard(_Util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var SkyGridObject = function () {
+	function SkyGridObject() {
+		_classCallCheck(this, SkyGridObject);
+
+		this._data = {};
+		this._fetched = false;
+		this._changes = {};
+		this._changed = false;
+		this._changeDefaults = {};
+		this._api = null;
+	}
+
+	/**
+  * Gets the unique ID of this object.
+  * @returns {string} The unique ID of this object.
+  */
+
+
+	_createClass(SkyGridObject, [{
+		key: 'discardChanges',
+
+
+		/**
+   * Discards all changes that have been applied since the object was last saved.
+   * @returns {void}
+   */
+		value: function discardChanges() {
+			this._changes = Util.deepClone(this._changeDefaults);
+			this._changed = false;
+		}
+	}, {
+		key: 'fetch',
+		value: function fetch() {
+			throw new Error('fetch not implemented for this object');
+		}
+
+		/**
+   * Fetches the current state of this object if it has not been fetched yet.
+   * 
+   * NOTE: This will only fetch the object if it has not previously been fetched, and
+   * does not take in to account changes that have happened to the object since it was last fetched.
+   * 
+   * @returns {Promise<SkyGridObject, SkyGridException>} A promise that resolves to this instance of the object.
+   *
+   * @example
+   * device.fetchIfNeeded().then(() => {
+   *	   // Device state has been successfully fetched
+   * }).catch(err => {
+   *     // Handle errors here
+   * });
+   */
+
+	}, {
+		key: 'fetchIfNeeded',
+		value: function fetchIfNeeded() {
+			if (this._fetched !== true) {
+				return this.fetch();
+			}
+
+			return Promise.resolve(this);
+		}
+	}, {
+		key: 'save',
+		value: function save() {
+			throw new Error('save not implemented for this object');
+		}
+	}, {
+		key: '_setProperty',
+		value: function _setProperty(name, value) {
+			this._changes[name] = value;
+			this._changed = true;
+		}
+	}, {
+		key: '_getProperty',
+		value: function _getProperty(name) {
+			if (this._changes.hasOwnProperty(name)) {
+				return this._changes[name];
+			}
+
+			return this._data[name];
+		}
+	}, {
+		key: '_getAclProperty',
+		value: function _getAclProperty() {
+			if (!this._changes.acl) {
+				if (this._data.acl) {
+					this._changes.acl = new Acl(this._data.acl);
+				} else {
+					this._changes.acl = new Acl();
+				}
+
+				this._changed = true;
+			}
+
+			return this._changes.acl;
+		}
+	}, {
+		key: '_setAclProperty',
+		value: function _setAclProperty(value) {
+			if (value && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object') {
+				if (!(value instanceof Acl)) {
+					value = new Acl(value);
+				}
+			}
+
+			this._setProperty('acl', value);
+		}
+	}, {
+		key: '_saveChanges',
+		value: function _saveChanges(changeDesc) {
+			var _this = this;
+
+			if (this._changed === true) {
+				var changes = Util.prepareChanges(this._changes, changeDesc.default);
+
+				return this._api.request(changeDesc.requestName, changes).then(function () {
+					Util.mergeFields(_this._data, _this._changes, changeDesc.fields);
+					if (changeDesc.hasAcl) {
+						Util.mergeAcl(_this._data, _this._changes);
+					}
+
+					_this.discardChanges();
+
+					return _this;
+				});
+			}
+
+			return Promise.resolve(this);
+		}
+	}, {
+		key: '_fetch',
+		value: function _fetch(request, desc) {
+			var _this2 = this;
+
+			return this._api.request(request, desc).then(function (data) {
+				_this2._data = data;
+				_this2._fetched = true;
+			});
+		}
+	}, {
+		key: 'id',
+		get: function get() {
+			return this._data.id;
+		}
+
+		/**
+   * Gets a value deteremining whether unsaved changes have been made to this object.
+   * @returns {boolean} True if the object has changes.
+   */
+
+	}, {
+		key: 'isDirty',
+		get: function get() {
+			return this._changed === true;
+		}
+
+		/**
+   * Gets a value deteremining whether this object is complete (has been fetched from the server).
+   * @returns {boolean} true if the object is complete, otherwise false.
+   */
+
+	}, {
+		key: 'isComplete',
+		get: function get() {
+			return this._fetched === true;
+		}
+	}]);
+
+	return SkyGridObject;
+}();
+
+exports.default = SkyGridObject;
+
+
+},{"./Util":14}],11:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _Api2 = require('./Api');
@@ -1951,13 +2145,13 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 /**
  * @private
  */
-var SocketApi = function (_Api) {
-	_inherits(SocketApi, _Api);
+var SocketIoApi = function (_Api) {
+	_inherits(SocketIoApi, _Api);
 
-	function SocketApi(address, projectId) {
-		_classCallCheck(this, SocketApi);
+	function SocketIoApi(address, projectId) {
+		_classCallCheck(this, SocketIoApi);
 
-		var _this = _possibleConstructorReturn(this, (SocketApi.__proto__ || Object.getPrototypeOf(SocketApi)).call(this));
+		var _this = _possibleConstructorReturn(this, (SocketIoApi.__proto__ || Object.getPrototypeOf(SocketIoApi)).call(this));
 
 		_this._address = address;
 		_this._projectId = projectId;
@@ -1988,7 +2182,7 @@ var SocketApi = function (_Api) {
 		return _this;
 	}
 
-	_createClass(SocketApi, [{
+	_createClass(SocketIoApi, [{
 		key: 'close',
 		value: function close() {
 			this._socket.close();
@@ -2041,13 +2235,13 @@ var SocketApi = function (_Api) {
 		}
 	}]);
 
-	return SocketApi;
+	return SocketIoApi;
 }(_Api3.default);
 
-exports.default = SocketApi;
+exports.default = SocketIoApi;
 
 
-},{"./Api":2,"./SkyGridException":9,"./ValidationException":14,"socket.io-client":51}],11:[function(require,module,exports){
+},{"./Api":2,"./SkyGridException":9,"./ValidationException":15,"socket.io-client":52}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2136,9 +2330,10 @@ var SubscriptionManager = function () {
 			var _this = this;
 
 			if (this._api) {
-				var promises = this._subscriptions.map(function (subId) {
-					return _this.removeSubscription(subId);
-				});
+				var promises = [];
+				for (var id in this._subscriptions) {
+					promises.push(this.removeSubscription(subId));
+				}
 
 				return Promise.all(promises).then(function () {
 					_this._subscriptions = {};
@@ -2167,7 +2362,7 @@ var SubscriptionManager = function () {
 exports.default = SubscriptionManager;
 
 
-},{"./SkyGridException":9}],12:[function(require,module,exports){
+},{"./SkyGridException":9}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2178,77 +2373,58 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _SkyGridObject2 = require('./SkyGridObject');
+
+var _SkyGridObject3 = _interopRequireDefault(_SkyGridObject2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var User = function () {
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var User = function (_SkyGridObject) {
+	_inherits(User, _SkyGridObject);
+
 	function User(api, data) {
 		_classCallCheck(this, User);
 
-		this._api = api;
+		var _this = _possibleConstructorReturn(this, (User.__proto__ || Object.getPrototypeOf(User)).call(this));
 
-		this._changes = {};
-		this._fetched = false;
-		this._changed = false;
+		_this._api = api;
 
 		if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
-			this._data = data;
-			this._fetched = !!data.meta;
+			_this._data = data;
+			_this._fetched = !!data.meta;
 		} else if (typeof data === 'string') {
-			this._data = { id: data };
+			_this._data = { id: data };
 		}
+		return _this;
 	}
 
 	_createClass(User, [{
 		key: 'save',
 		value: function save() {
-			var _this = this;
-
 			if (this._api.usingMasterKey !== true) {
 				throw new SkyGridException('Can only edit users when using the master key');
 			}
 
-			if (this._changed === true) {
-				this._changes.userId = this.id;
-
-				return this._api.request('updateUser', this._changes).then(function () {
-					if (_this._changes.email) {
-						_this._data.email = _this._changes.email;
-					}
-
-					if (_this._changes.meta) {
-						_this._data.meta = _this._changes.meta;
-					}
-
-					_this._changes = {};
-					_this._changed = false;
-
-					return _this;
-				});
-			}
-
-			return Promise.resolve(this);
+			return this._saveChanges({
+				default: {
+					userId: this.id
+				},
+				requestName: 'updateUser',
+				fields: ['email', 'meta']
+			});
 		}
 	}, {
 		key: 'fetch',
 		value: function fetch() {
-			var _this2 = this;
-
-			return this._api.request('fetchUser', {
+			return this._fetch('fetchUser', {
 				userId: this.id
-			}).then(function (data) {
-				_this2._data = data;
-				_this2._fetched = true;
-				return _this2;
 			});
-		}
-	}, {
-		key: 'fetchIfNeeded',
-		value: function fetchIfNeeded() {
-			if (this._fetched !== true) {
-				return this.fetch();
-			}
-
-			return Promise.resolve(this);
 		}
 	}, {
 		key: 'remove',
@@ -2256,56 +2432,35 @@ var User = function () {
 			return this._api.request('deleteUser', { userId: this.id });
 		}
 	}, {
-		key: 'discardChanges',
-		value: function discardChanges() {
-			this._changes = {};
-		}
-	}, {
-		key: 'id',
-		get: function get() {
-			return this._data.id;
-		}
-	}, {
 		key: 'email',
 		get: function get() {
-			if (this._changes.email) {
-				return this._changes.email;
-			}
-
-			return this._data.email;
+			this._getProperty('email');
 		},
 		set: function set(value) {
-			this._changes.email = value;
-			this._changed = true;
+			this._setProperty('email', value);
 		}
 	}, {
 		key: 'meta',
 		get: function get() {
-			if (this._changes.meta) {
-				return this._changes.meta;
-			}
-
-			return this._data.meta;
+			this._getProperty('meta');
 		},
 		set: function set(value) {
-			this._changes.meta = value;
-			this._changed = true;
+			this._setProperty('meta', value);
 		}
 	}, {
 		key: 'password',
 		set: function set(value) {
-			this._changes.password = value;
-			this._changed = true;
+			this._setProperty('password', value);
 		}
 	}]);
 
 	return User;
-}();
+}(_SkyGridObject3.default);
 
 exports.default = User;
 
 
-},{}],13:[function(require,module,exports){
+},{"./SkyGridObject":10}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2405,7 +2560,7 @@ function fixDataDates(data) {
 }
 
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2440,7 +2595,7 @@ ValidationException.prototype.name = 'ValidationException';
 ValidationException.prototype.constructor = ValidationException;
 
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -2470,7 +2625,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -2501,7 +2656,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -2588,7 +2743,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -2657,7 +2812,7 @@ Backoff.prototype.setJitter = function(jitter){
   };
 })();
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -2757,9 +2912,9 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],20:[function(require,module,exports){
-
 },{}],21:[function(require,module,exports){
+
+},{}],22:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -2784,7 +2939,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -2947,7 +3102,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -2955,7 +3110,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -3125,7 +3280,7 @@ function localstorage(){
   } catch (e) {}
 }
 
-},{"./debug":25}],25:[function(require,module,exports){
+},{"./debug":26}],26:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -3324,11 +3479,11 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":47}],26:[function(require,module,exports){
+},{"ms":48}],27:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":27}],27:[function(require,module,exports){
+},{"./lib/":28}],28:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -3340,7 +3495,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":28,"engine.io-parser":37}],28:[function(require,module,exports){
+},{"./socket":29,"engine.io-parser":38}],29:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -4063,7 +4218,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":29,"./transports":30,"component-emitter":36,"debug":24,"engine.io-parser":37,"indexof":45,"parsejson":48,"parseqs":49,"parseuri":50}],29:[function(require,module,exports){
+},{"./transport":30,"./transports":31,"component-emitter":37,"debug":25,"engine.io-parser":38,"indexof":46,"parsejson":49,"parseqs":50,"parseuri":51}],30:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -4220,7 +4375,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":36,"engine.io-parser":37}],30:[function(require,module,exports){
+},{"component-emitter":37,"engine.io-parser":38}],31:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -4277,7 +4432,7 @@ function polling (opts) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":31,"./polling-xhr":32,"./websocket":34,"xmlhttprequest-ssl":35}],31:[function(require,module,exports){
+},{"./polling-jsonp":32,"./polling-xhr":33,"./websocket":35,"xmlhttprequest-ssl":36}],32:[function(require,module,exports){
 (function (global){
 
 /**
@@ -4512,7 +4667,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":33,"component-inherit":23}],32:[function(require,module,exports){
+},{"./polling":34,"component-inherit":24}],33:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -4928,7 +5083,7 @@ function unloadHandler () {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":33,"component-emitter":36,"component-inherit":23,"debug":24,"xmlhttprequest-ssl":35}],33:[function(require,module,exports){
+},{"./polling":34,"component-emitter":37,"component-inherit":24,"debug":25,"xmlhttprequest-ssl":36}],34:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -5175,7 +5330,7 @@ Polling.prototype.uri = function () {
   return schema + '://' + (ipv6 ? '[' + this.hostname + ']' : this.hostname) + port + this.path + query;
 };
 
-},{"../transport":29,"component-inherit":23,"debug":24,"engine.io-parser":37,"parseqs":49,"xmlhttprequest-ssl":35,"yeast":63}],34:[function(require,module,exports){
+},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":50,"xmlhttprequest-ssl":36,"yeast":64}],35:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -5470,7 +5625,7 @@ WS.prototype.check = function () {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../transport":29,"component-inherit":23,"debug":24,"engine.io-parser":37,"parseqs":49,"ws":20,"yeast":63}],35:[function(require,module,exports){
+},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":50,"ws":21,"yeast":64}],36:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 
 // Indicate to eslint that ActiveXObject is global
@@ -5512,7 +5667,7 @@ module.exports = function (opts) {
   }
 };
 
-},{"has-cors":44}],36:[function(require,module,exports){
+},{"has-cors":45}],37:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -5678,7 +5833,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -6288,7 +6443,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":38,"after":15,"arraybuffer.slice":16,"base64-arraybuffer":18,"blob":19,"has-binary":39,"wtf-8":62}],38:[function(require,module,exports){
+},{"./keys":39,"after":16,"arraybuffer.slice":17,"base64-arraybuffer":19,"blob":20,"has-binary":40,"wtf-8":63}],39:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -6309,7 +6464,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 (function (global){
 
 /*
@@ -6371,12 +6526,12 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":40}],40:[function(require,module,exports){
+},{"isarray":41}],41:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -6680,7 +6835,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 (function (global){
 
 /*
@@ -6743,9 +6898,9 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":43}],43:[function(require,module,exports){
-arguments[4][40][0].apply(exports,arguments)
-},{"dup":40}],44:[function(require,module,exports){
+},{"isarray":44}],44:[function(require,module,exports){
+arguments[4][41][0].apply(exports,arguments)
+},{"dup":41}],45:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -6764,7 +6919,7 @@ try {
   module.exports = false;
 }
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -6775,7 +6930,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (global){
 /*! JSON v3.3.2 | http://bestiejs.github.io/json3 | Copyright 2012-2014, Kit Cambridge | http://kit.mit-license.org */
 ;(function () {
@@ -7681,7 +7836,7 @@ module.exports = function(arr, obj){
 }).call(this);
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -7808,7 +7963,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -7843,7 +7998,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -7882,7 +8037,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -7923,7 +8078,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -8034,7 +8189,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":52,"./socket":54,"./url":55,"debug":24,"socket.io-parser":57}],52:[function(require,module,exports){
+},{"./manager":53,"./socket":55,"./url":56,"debug":25,"socket.io-parser":58}],53:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -8596,7 +8751,7 @@ Manager.prototype.onreconnect = function () {
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":53,"./socket":54,"backo2":17,"component-bind":21,"component-emitter":22,"debug":24,"engine.io-client":26,"indexof":45,"socket.io-parser":57}],53:[function(require,module,exports){
+},{"./on":54,"./socket":55,"backo2":18,"component-bind":22,"component-emitter":23,"debug":25,"engine.io-client":27,"indexof":46,"socket.io-parser":58}],54:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -8622,7 +8777,7 @@ function on (obj, ev, fn) {
   };
 }
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -9043,7 +9198,7 @@ Socket.prototype.compress = function (compress) {
   return this;
 };
 
-},{"./on":53,"component-bind":21,"component-emitter":22,"debug":24,"has-binary":42,"socket.io-parser":57,"to-array":61}],55:[function(require,module,exports){
+},{"./on":54,"component-bind":22,"component-emitter":23,"debug":25,"has-binary":43,"socket.io-parser":58,"to-array":62}],56:[function(require,module,exports){
 (function (global){
 
 /**
@@ -9122,7 +9277,7 @@ function url (uri, loc) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":24,"parseuri":50}],56:[function(require,module,exports){
+},{"debug":25,"parseuri":51}],57:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -9267,7 +9422,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":58,"isarray":60}],57:[function(require,module,exports){
+},{"./is-buffer":59,"isarray":61}],58:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -9669,7 +9824,7 @@ function error(data){
   };
 }
 
-},{"./binary":56,"./is-buffer":58,"component-emitter":59,"debug":24,"isarray":60,"json3":46}],58:[function(require,module,exports){
+},{"./binary":57,"./is-buffer":59,"component-emitter":60,"debug":25,"isarray":61,"json3":47}],59:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -9686,11 +9841,11 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],59:[function(require,module,exports){
-arguments[4][36][0].apply(exports,arguments)
-},{"dup":36}],60:[function(require,module,exports){
-arguments[4][40][0].apply(exports,arguments)
-},{"dup":40}],61:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
+arguments[4][37][0].apply(exports,arguments)
+},{"dup":37}],61:[function(require,module,exports){
+arguments[4][41][0].apply(exports,arguments)
+},{"dup":41}],62:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -9705,7 +9860,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/wtf8 v1.0.0 by @mathias */
 ;(function(root) {
@@ -9943,7 +10098,7 @@ function toArray(list, index) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 'use strict';
 
 var alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'.split('')
