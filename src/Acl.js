@@ -9,6 +9,7 @@ function validateAccessType(accessType) {
 	case 'read':
 	case 'update':
 	case 'delete':
+	case 'deviceKey':
 		return;
 	}
 
