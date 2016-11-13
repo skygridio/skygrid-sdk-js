@@ -29,6 +29,7 @@ function validateAccessType(accessType) {
 		case 'read':
 		case 'update':
 		case 'delete':
+		case 'deviceKey':
 			return;
 	}
 
@@ -2136,15 +2137,9 @@ var SubscriptionManager = function () {
 			var _this = this;
 
 			if (this._api) {
-				/*
-    const promises = this._subscriptions.map(subId => {
-    return this.removeSubscription(subId);
-    });*/
-
 				var promises = [];
 
 				for (var s in this._subscriptions) {
-					console.log(this._subscriptions[s].settings.subscriptionId);
 					promises.push(this._subscriptions[s].settings.subscriptionId);
 				}
 
