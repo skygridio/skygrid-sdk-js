@@ -45,7 +45,7 @@ export default class Device extends SkyGridObject {
 	 * @returns {string} The name of this device, if a name has been set.  Otherwise returns null.
 	 */
 	get name() {
-		this._getDataProperty('name');
+		return this._getDataProperty('name');
 	}
 
 	/**
@@ -93,7 +93,7 @@ export default class Device extends SkyGridObject {
 	 * @returns {boolean} True if logging is currently enabled.
 	 */
 	get log() {
-		this._getDataProperty('log');
+		return this._getDataProperty('log');
 	}
 
 	/**

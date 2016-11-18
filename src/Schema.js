@@ -40,7 +40,7 @@ export default class Schema extends SkyGridObject {
 	 * @param {string} value - The name of the schema.
 	 */
 	get name() {
-		this._getDataProperty('name');
+		return this._getDataProperty('name');
 	}
 
 	/**
@@ -56,7 +56,7 @@ export default class Schema extends SkyGridObject {
 	 * @returns {string} Description of the schema.
 	 */
 	get description() {
-		this._getDataProperty('description');
+		return this._getDataProperty('description');
 	}
 
 	/**
