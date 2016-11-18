@@ -28,6 +28,7 @@ export default class Device extends SkyGridObject {
 
 		this._changeDefaults = { properties: {} };
 		this._fetched = false;
+		this.discardChanges();
 
 		if (typeof data === 'object') {
 			Util.fixDataDates(data);
@@ -126,7 +127,7 @@ export default class Device extends SkyGridObject {
 	 *
 	 * @example
 	 * for (let [key, value] of device.properties) {
-	 *     console.log(key + " = " + value);
+	 *     console.log(key + ' = ' + value);
 	 * }
 	 */
 	get properties() {

@@ -1,4 +1,7 @@
 /**
+ * Gets a value determining whether the specified object contains any keys.
+ * @param {object} object The object to check.
+ * @returns {boolean} True if the object contains keys.
  * @private
  */
 export function objectEmpty(obj) {

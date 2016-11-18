@@ -318,6 +318,7 @@ var Device = function (_SkyGridObject) {
 
 		_this._changeDefaults = { properties: {} };
 		_this._fetched = false;
+		_this.discardChanges();
 
 		if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
 			Util.fixDataDates(data);
@@ -732,7 +733,7 @@ var Device = function (_SkyGridObject) {
    *
    * @example
    * for (let [key, value] of device.properties) {
-   *     console.log(key + " = " + value);
+   *     console.log(key + ' = ' + value);
    * }
    */
 
@@ -1151,8 +1152,8 @@ var Project = function (_SkyGridObject) {
 		}
 
 		/**
-   * Saves the changes that have been made to the device to the SkyGrid server.
-   * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
+   * Saves the changes that have been made to the project to the SkyGrid server.
+   * @returns {Promise<Project, SkyGridException>} A promise that resolves to this instance of the project.
    */
 
 	}, {
@@ -1166,8 +1167,8 @@ var Project = function (_SkyGridObject) {
 				default: {
 					projectId: this.id
 				},
-				requestName: 'updateDevice',
-				fields: ['name', 'allowSignup'],
+				requestName: 'updateProject',
+				fields: ['allowSignup'],
 				hasAcl: true
 			});
 		}
@@ -1294,15 +1295,6 @@ var Project = function (_SkyGridObject) {
 		key: 'name',
 		get: function get() {
 			this._getProperty('name');
-		}
-
-		/**
-   * Sets the name of this project.
-   * @param {string} value - The name of the project.
-   */
-		,
-		set: function set(value) {
-			this._setProperty('name', value);
 		}
 	}, {
 		key: 'allowSignup',
@@ -1618,6 +1610,7 @@ var Schema = function (_SkyGridObject) {
 
 		_this._api = api;
 		_this._changeDefaults = { properties: {} };
+		_this.discardChanges();
 
 		if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
 			_this._data = data;
@@ -1643,14 +1636,14 @@ var Schema = function (_SkyGridObject) {
 		/**
    * Adds a new property to the schema.
    * @param {string} name   The name of the property.
-   * @param {object} schema The schema that details the content of the property.
-   * @param {any} def    	  The default value of the property.  Must be relational to the schema!
+   * @param {object} type The type that details the content of the property.
+   * @param {any} def    	  The default value of the property.  Must be relational to the type!
    * @returns {void}
    * @private
    */
-		value: function addProperty(name, schema, def) {
+		value: function addProperty(name, type, def) {
 			this._changes.properties[name] = {
-				schema: schema,
+				type: type,
 				default: def
 			};
 
@@ -1659,20 +1652,20 @@ var Schema = function (_SkyGridObject) {
 
 		/**
    * Updates a property.
-   * @param {string} name   The name of the property.
-   * @param {object} schema The schema that details the content of the property.
-   * @param {any} def    	  The default value of the property.  Must be relational to the schema!
+   * @param {string} 	name   	The name of the property.
+   * @param {object}	type 	The type that details the content of the property.
+   * @param {any} 	def 	The default value of the property.  Must be relational to the type!
    * @returns {void}
    * @private
    */
 
 	}, {
 		key: 'updateProperty',
-		value: function updateProperty(name, schema, def) {
+		value: function updateProperty(name, type, def) {
 			var prop = this._changes[name];
 			if (prop) {
-				if (schema) {
-					prop.schema = schema;
+				if (type) {
+					prop.type = type;
 				}
 
 				if (def) {
@@ -1844,19 +1837,29 @@ var Schema = function (_SkyGridObject) {
 		}
 
 		/**
-   * Gets an array of strings that contains the names of all available properties.
-   * @returns {string[]} A string array of all property names.
+   * Gets a Map of properties and their values.  This map is a copy of the internal
+   * state, and as a result changes will not be reflected on the Device object.
+   * @returns {Map<string,any>} A map of properties and their values
+   *
+   * @example
+   * for (let [key, value] of device.properties) {
+   *     console.log(key + " = " + value);
+   * }
    */
 
 	}, {
 		key: 'properties',
 		get: function get() {
-			var names = Object.keys(this._data.properties);
-			for (var key in this._changes.properties) {
-				names[key] = this._changes.properties[key];
+			var ret = new Map();
+			for (var key in this._data.properties) {
+				ret.set(key, this._data.properties[key]);
 			}
 
-			return names;
+			for (var _key in this._changes.properties) {
+				ret.set(_key, this._changes.properties[_key]);
+			}
+
+			return ret;
 		}
 	}]);
 
@@ -2476,6 +2479,9 @@ exports.mergeAcl = mergeAcl;
 exports.prepareChanges = prepareChanges;
 exports.fixDataDates = fixDataDates;
 /**
+ * Gets a value determining whether the specified object contains any keys.
+ * @param {object} object The object to check.
+ * @returns {boolean} True if the object contains keys.
  * @private
  */
 function objectEmpty(obj) {

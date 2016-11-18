@@ -72,14 +72,6 @@ export default class Project extends SkyGridObject {
 		this._getProperty('name');
 	}
 
-	/**
-	 * Sets the name of this project.
-	 * @param {string} value - The name of the project.
-	 */
-	set name(value) {
-		this._setProperty('name', value);
-	}
-
 	get allowSignup() {
 		this._getProperty('allowSignup');
 	}
@@ -311,8 +303,8 @@ export default class Project extends SkyGridObject {
 	}
 
 	/**
-	 * Saves the changes that have been made to the device to the SkyGrid server.
-	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
+	 * Saves the changes that have been made to the project to the SkyGrid server.
+	 * @returns {Promise<Project, SkyGridException>} A promise that resolves to this instance of the project.
 	 */
 	save() {
 		if (this._api.usingMasterKey !== true) {
@@ -323,8 +315,8 @@ export default class Project extends SkyGridObject {
 			default: {
 				projectId: this.id
 			},
-			requestName: 'updateDevice',
-			fields: ['name', 'allowSignup'],
+			requestName: 'updateProject',
+			fields: ['allowSignup'],
 			hasAcl: true
 		});
 	}
@@ -386,7 +378,7 @@ export default class Project extends SkyGridObject {
 
 			if (this._subCallbacks[id] === undefined) {
 				throw new SkyGridException('Subscription does not exist');
-			}
+			} 
 
 			delete this._subCallbacks[id];
 		} else {
