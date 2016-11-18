@@ -86,13 +86,13 @@ export default class Schema extends SkyGridObject {
 	}
 	
 	/**
-	 * Gets a Map of properties and their values.  This map is a copy of the internal
-	 * state, and as a result changes will not be reflected on the Device object.
-	 * @returns {Map<string,any>} A map of properties and their values
+	 * Gets a Map of properties and their descriptors.  This map is a copy of the internal
+	 * state, and as a result changes will not be reflected on the Schema object.
+	 * @returns {Map<string,object>} A map of properties and their descriptors.
 	 *
 	 * @example
-	 * for (let [key, value] of device.properties) {
-	 *     console.log(key + " = " + value);
+	 * for (let [key, desc] of schema.properties) {
+	 *     console.log(key + " = " + JSON.stringify(desc));
 	 * }
 	 */
 	get properties() {
