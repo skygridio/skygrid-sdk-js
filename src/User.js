@@ -16,7 +16,7 @@ export default class User extends SkyGridObject {
 	}
 
 	get email() {
-		this._getDataProperty('email');
+		return this._getDataProperty('email');
 	}
 
 	set email(value) {
@@ -24,7 +24,7 @@ export default class User extends SkyGridObject {
 	}
 
 	get meta() {
-		this._getDataProperty('meta');
+		return this._getDataProperty('meta');
 	}
 
 	set meta(value) {
