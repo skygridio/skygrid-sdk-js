@@ -22,6 +22,7 @@ export default class Schema extends SkyGridObject {
 
 		this._api = api;
 		this._changeDefaults = { properties: {} };
+		this.discardChanges();
 
 		if (typeof data === 'object') {
 			this._data = data;
@@ -83,31 +84,41 @@ export default class Schema extends SkyGridObject {
 	set acl(value) {
 		this._setAclProperty(value);
 	}
-
+	
 	/**
-	 * Gets an array of strings that contains the names of all available properties.
-	 * @returns {string[]} A string array of all property names.
+	 * Gets a Map of properties and their values.  This map is a copy of the internal
+	 * state, and as a result changes will not be reflected on the Device object.
+	 * @returns {Map<string,any>} A map of properties and their values
+	 *
+	 * @example
+	 * for (let [key, value] of device.properties) {
+	 *     console.log(key + " = " + value);
+	 * }
 	 */
 	get properties() {
-		const names = Object.keys(this._data.properties);
-		for (let key in this._changes.properties) {
-			names[key] = this._changes.properties[key];
+		const ret = new Map();
+		for (let key in this._data.properties) {
+			ret.set(key, this._data.properties[key]);
 		}
 
-		return names;
+		for (let key in this._changes.properties) {
+			ret.set(key, this._changes.properties[key]);
+		}
+
+		return ret;
 	}
 
 	/**
 	 * Adds a new property to the schema.
 	 * @param {string} name   The name of the property.
-	 * @param {object} schema The schema that details the content of the property.
-	 * @param {any} def    	  The default value of the property.  Must be relational to the schema!
+	 * @param {object} type The type that details the content of the property.
+	 * @param {any} def    	  The default value of the property.  Must be relational to the type!
 	 * @returns {void}
 	 * @private
 	 */
-	addProperty(name, schema, def) {
+	addProperty(name, type, def) {
 		this._changes.properties[name] = {
-			schema: schema,
+			type: type,
 			default: def
 		};
 
@@ -116,17 +127,17 @@ export default class Schema extends SkyGridObject {
 
 	/**
 	 * Updates a property.
-	 * @param {string} name   The name of the property.
-	 * @param {object} schema The schema that details the content of the property.
-	 * @param {any} def    	  The default value of the property.  Must be relational to the schema!
+	 * @param {string} 	name   	The name of the property.
+	 * @param {object}	type 	The type that details the content of the property.
+	 * @param {any} 	def 	The default value of the property.  Must be relational to the type!
 	 * @returns {void}
 	 * @private
 	 */
-	updateProperty(name, schema, def) {
+	updateProperty(name, type, def) {
 		let prop = this._changes[name];
 		if (prop) {
-			if (schema) {
-				prop.schema = schema;
+			if (type) {
+				prop.type = type;
 			}
 
 			if (def) {
