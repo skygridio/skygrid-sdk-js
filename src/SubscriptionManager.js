@@ -1,4 +1,4 @@
-import SkyGridException from './SkyGridException';
+import SkyGridError from './SkyGridError';
 
 /**
  * @private
@@ -40,7 +40,7 @@ export default class SubscriptionManager {
 		if (sub) {
 			sub.callback(changes, device);
 		} else {
-			throw new SkyGridException('Subscription not found');
+			throw new SkyGridError('Subscription not found');
 		}
 	}
 

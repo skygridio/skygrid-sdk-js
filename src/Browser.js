@@ -1,6 +1,6 @@
 import SkyGrid from './SkyGrid';
-import SkyGridException from './SkyGridException';
+import SkyGridError from './SkyGridError';
 import Acl from './Acl';
 global.SkyGrid = SkyGrid;
 global.Acl = Acl;
-global.SkyGridException = SkyGridException;
+global.SkyGridError = SkyGridError;

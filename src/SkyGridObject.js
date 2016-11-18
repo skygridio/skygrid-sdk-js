@@ -1,5 +1,9 @@
 import * as Util from './Util';
 
+/**
+ * Base class for all objects that can be fetched from or persisted to the SkyGrid backend.
+ * The fetch() and save() methods are to be overidden by child classes.
+ */
 export default class SkyGridObject {
 	constructor() {
 		this._data = {};
@@ -43,6 +47,21 @@ export default class SkyGridObject {
 		this._changed = false;
 	}
 
+	/**
+	 * Abstract save function to be overidden by child classes.  Saves any changes in this object
+	 * to the SkyGrid backend.
+	 * @returns {Promise<SkyGridObject, SkyGridError>} A promise that resolves to this instance of the object.
+	 * @private
+	 */
+	save() {
+		throw new Error('save not implemented for this object');
+	}
+
+	/**
+	 * Abstract fetch function to be overidden by child classes.  Fetches the current state of this object.
+	 * @returns {Promise<SkyGridObject, SkyGridError>} A promise that resolves to this instance of the object.
+	 * @private
+	 */
 	fetch() {
 		throw new Error('fetch not implemented for this object');
 	}
@@ -53,7 +72,7 @@ export default class SkyGridObject {
 	 * NOTE: This will only fetch the object if it has not previously been fetched, and
 	 * does not take in to account changes that have happened to the object since it was last fetched.
 	 * 
-	 * @returns {Promise<SkyGridObject, SkyGridException>} A promise that resolves to this instance of the object.
+	 * @returns {Promise<SkyGridObject, SkyGridError>} A promise that resolves to this instance of the object.
 	 *
 	 * @example
 	 * device.fetchIfNeeded().then(() => {
@@ -70,16 +89,12 @@ export default class SkyGridObject {
 		return Promise.resolve(this);
 	}
 
-	save() {
-		throw new Error('save not implemented for this object');
-	}
-
-	_setProperty(name, value) {
+	_setDataProperty(name, value) {
 		this._changes[name] = value;
 		this._changed = true;
 	}
 
-	_getProperty(name) {
+	_getDataProperty(name) {
 		if (this._changes.hasOwnProperty(name)) {
 			return this._changes[name];
 		}
@@ -108,7 +123,7 @@ export default class SkyGridObject {
 			}
 		}
 
-		this._setProperty('acl', value);
+		this._setDataProperty('acl', value);
 	}
 
 	_saveChanges(changeDesc) {

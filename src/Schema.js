@@ -9,8 +9,8 @@ export default class Schema extends SkyGridObject {
 	/**
 	 * Create a schema instance.  This should NEVER be called by the user.
 	 * To get actual schema instances, use SkyGrid.schema() or one of the find() functions.
-	 * @param {SkyGridApi} api - The API interface used to get device data from the SkyGrid servers.
-	 * @param {object} data - The data that represents this device.
+	 * @param {SkyGridApi} 	api 	The API interface used to get device data from the SkyGrid servers.
+	 * @param {object} 		data 	The data that represents this device.
 	 * @private
 	 */
 	constructor(api, data) {
@@ -40,7 +40,7 @@ export default class Schema extends SkyGridObject {
 	 * @param {string} value - The name of the schema.
 	 */
 	get name() {
-		this._getProperty('name');
+		this._getDataProperty('name');
 	}
 
 	/**
@@ -48,7 +48,7 @@ export default class Schema extends SkyGridObject {
 	 * @param {string} value - The name of the schema.
 	 */
 	set name(value) {
-		this._setProperty('name');
+		this._setDataProperty('name');
 	}
 
 	/**
@@ -56,7 +56,7 @@ export default class Schema extends SkyGridObject {
 	 * @returns {string} Description of the schema.
 	 */
 	get description() {
-		this._getProperty('description');
+		this._getDataProperty('description');
 	}
 
 	/**
@@ -65,7 +65,7 @@ export default class Schema extends SkyGridObject {
 	 * @returns {void}
 	 */
 	set description(value) {
-		this._setProperty('description');
+		this._setDataProperty('description');
 	}
 
 	/**
@@ -110,9 +110,9 @@ export default class Schema extends SkyGridObject {
 
 	/**
 	 * Adds a new property to the schema.
-	 * @param {string} name   The name of the property.
-	 * @param {object} type The type that details the content of the property.
-	 * @param {any} def    	  The default value of the property.  Must be relational to the type!
+	 * @param {string} 	name   	The name of the property.
+	 * @param {object} 	type 	The type that details the content of the property.
+	 * @param {any} 	def 	The default value of the property.  Must be relational to the type!
 	 * @returns {void}
 	 * @private
 	 */
@@ -181,12 +181,12 @@ export default class Schema extends SkyGridObject {
 
 	/**
 	 * Saves all changes that have been made since the last save.
-	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to this instance of the schema.
+	 * @returns {Promise<Schema, SkyGridError>} A promise that resolves to this instance of the schema.
 	 * @private
 	 */
 	save() {
 		if (this._api.usingMasterKey !== true) {
-			throw new SkyGridException('Can only edit schemas when using the master key');
+			throw new SkyGridError('Can only edit schemas when using the master key');
 		}
 
 		return this._saveChanges({
@@ -201,7 +201,7 @@ export default class Schema extends SkyGridObject {
 
 	/**
 	 * Fetches the schema from the SkyGrid backend.
-	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to this instance of the schema.
+	 * @returns {Promise<Schema, SkyGridError>} A promise that resolves to this instance of the schema.
 	 *
 	 * @example
 	 * schema.fetch().then(() => {

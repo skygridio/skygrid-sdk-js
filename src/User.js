@@ -16,28 +16,28 @@ export default class User extends SkyGridObject {
 	}
 
 	get email() {
-		this._getProperty('email');
+		this._getDataProperty('email');
 	}
 
 	set email(value) {
-		this._setProperty('email', value);
+		this._setDataProperty('email', value);
 	}
 
 	get meta() {
-		this._getProperty('meta');
+		this._getDataProperty('meta');
 	}
 
 	set meta(value) {
-		this._setProperty('meta', value);
+		this._setDataProperty('meta', value);
 	}
 
 	set password(value) {
-		this._setProperty('password', value);
+		this._setDataProperty('password', value);
 	}
 
 	save() {
 		if (this._api.usingMasterKey !== true) {
-			throw new SkyGridException('Can only edit users when using the master key');
+			throw new SkyGridError('Can only edit users when using the master key');
 		}
 
 		return this._saveChanges({

@@ -1,5 +1,5 @@
 import Api from './Api';
-import SkyGridException from './SkyGridException';
+import SkyGridError from './SkyGridError';
 import ValidationException from './ValidationException';
 import io from 'socket.io-client';
 
@@ -74,7 +74,7 @@ export default class SocketIoApi extends Api {
 				if (response.status === 'ok') {
 					resolve(response.data);
 				} else if (typeof response.data === 'string') {
-					throw new SkyGridException(response.data);
+					throw new SkyGridError(response.data);
 				} else {
 					throw new ValidationException(response.data);
 				}				

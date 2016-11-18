@@ -1,7 +1,7 @@
 /**
  * The error class used for all errors that are thrown in the SkyGrid SDK.
  */
-export default class SkyGridException {
+export default class SkyGridError {
 	/**
 	 * Instantiates a new instance of an error.
 	 * @param  {string} message The error description.
@@ -14,7 +14,7 @@ export default class SkyGridException {
 		this.message = message;
 		// Use V8's native method if available, otherwise fallback
 		if ('captureStackTrace' in Error) {
-			Error.captureStackTrace(this, SkyGridException);
+			Error.captureStackTrace(this, SkyGridError);
 		} else {
 			/**
 			 * Stack trace.

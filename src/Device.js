@@ -45,7 +45,7 @@ export default class Device extends SkyGridObject {
 	 * @returns {string} The name of this device, if a name has been set.  Otherwise returns null.
 	 */
 	get name() {
-		this._getProperty('name');
+		this._getDataProperty('name');
 	}
 
 	/**
@@ -53,7 +53,7 @@ export default class Device extends SkyGridObject {
 	 * @param {string} value - The name of the device.
 	 */
 	set name(value) {
-		this._setProperty('name', value);
+		this._setDataProperty('name', value);
 	}
 
 	/**
@@ -85,7 +85,7 @@ export default class Device extends SkyGridObject {
 			}
 		}
 
-		this._setProperty('acl', value);
+		this._setDataProperty('acl', value);
 	}
 
 	/**
@@ -93,7 +93,7 @@ export default class Device extends SkyGridObject {
 	 * @returns {boolean} True if logging is currently enabled.
 	 */
 	get log() {
-		this._getProperty('log');
+		this._getDataProperty('log');
 	}
 
 	/**
@@ -101,7 +101,7 @@ export default class Device extends SkyGridObject {
 	 * @param {boolean} value - True to enable logging.
 	 */
 	set log(value) {
-		this._setProperty('log', value);
+		this._setDataProperty('log', value);
 	}
 
 	/**
@@ -184,7 +184,7 @@ export default class Device extends SkyGridObject {
 	/**
 	 * Saves the changes that have been made to the device to the SkyGrid server.
 	 * @param 	{object}	properties 	[An optional table of properties to set when saving.]
-	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
+	 * @returns {Promise<Device, SkyGridError>} A promise that resolves to this instance of the device.
 	 */
 	save(properties) {
 		if (properties) {
@@ -206,7 +206,7 @@ export default class Device extends SkyGridObject {
 
 	/**
 	 * Fetches the current state of this device.
-	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to this instance of the device.
+	 * @returns {Promise<Device, SkyGridError>} A promise that resolves to this instance of the device.
 	 *
 	 * @example
 	 * device.fetch().then(() => {
@@ -224,8 +224,6 @@ export default class Device extends SkyGridObject {
 		});
 	}
 
-	
-
 	/**
 	 * Retreives the logged history of this device.  Each history record stores the entire
 	 * state of the device at the time it is logged.
@@ -235,7 +233,7 @@ export default class Device extends SkyGridObject {
 	 * @param  {Date} 	[start] The start date to retrieve data from.
 	 * @param  {Date} 	[end]   The end date to retrieve data to.
 	 * @param  {Number}	[limit] The total numer of records to return.
-	 * @returns {Promise<object[], SkyGridException>} A promise that resolves to an array of records found within the given constraints.
+	 * @returns {Promise<object[], SkyGridError>} A promise that resolves to an array of records found within the given constraints.
 	 *
 	 * @example
 	 * device.history(startDate, endDate).then(results => {
@@ -321,7 +319,7 @@ export default class Device extends SkyGridObject {
 	 * NOTE: Subscribing is currently only available when using socket based communication methods.
 	 * 
 	 * @param  {Function} [callback] Optional callback that is raised when an update is received.
-	 * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
+	 * @returns {Promise<Number, SkyGridError>} A promise that resolves to the ID of the subscription.
 	 *
 	 * @example
 	 * device.subscribe();
@@ -376,12 +374,12 @@ export default class Device extends SkyGridObject {
 			if (typeof id === 'function') {
 				id = this._findSubId(id);
 				if (id === null) {
-					throw new SkyGridException('Subscription does not exist');
+					throw new SkyGridError('Subscription does not exist');
 				}
 			}
 
 			if (this._subCallbacks[id] === undefined) {
-				throw new SkyGridException('Subscription does not exist');
+				throw new SkyGridError('Subscription does not exist');
 			}
 
 			delete this._subCallbacks[id];
@@ -398,6 +396,11 @@ export default class Device extends SkyGridObject {
 		return Promise.resolve();
 	}
 
+	/**
+	 * Finds the subscription ID associated with the specified callback function.
+	 * @param  {Function} 	callback 	The callback function to search for
+	 * @return {number|null} 	The ID of the subscription.  Returns null if no subscription is found.
+	 */
 	_findSubId(callback) {
 		for (let id in this._subCallbacks) {
 			if (this._subCallbacks[id] === callback) {

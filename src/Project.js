@@ -1,11 +1,14 @@
+import SubscriptionManager from './SubscriptionManager';
+import SkyGridError from './SkyGridError';
+import SkyGridObject from './SkyGridObject';
+
 import SocketIoApi from './SocketIoApi';
 import RestApi from './RestApi';
+
 import Device from './Device';
 import Schema from './Schema';
 import User from './User';
-import SubscriptionManager from './SubscriptionManager';
-import SkyGridException from './SkyGridException';
-import SkyGridObject from './SkyGridObject';
+
 import * as Util from './Util';
 
 const API_URL = process.env.SKYGRID_SERVER_ADDRESS || 'https://api.skygrid.io';
@@ -28,10 +31,10 @@ function parseSettings(settings) {
  */
 export default class Project extends SkyGridObject {
 	/**
-	 * [constructor description]
-	 * @param  {[type]} projectId [description]
-	 * @param  {[type]} settings  [description]
-	 * @return {[type]}           [description]
+	 * Create a project instance.  This should NEVER be called by the user.
+	 * To get actual project instances, use SkyGrid.project().
+	 * @param {SkyGridApi} 	api 	The API interface used to get device data from the SkyGrid servers.
+	 * @param {object} 		data 	The data that represents this device.
 	 * @private
 	 */
 	constructor(projectId, settings) {
@@ -69,15 +72,24 @@ export default class Project extends SkyGridObject {
 	 * @returns {string} The name of this project, if a name has been set.  Otherwise returns null.
 	 */
 	get name() {
-		this._getProperty('name');
+		this._getDataProperty('name');
 	}
 
+	/** 
+	 * Gets a value that determines whether this project allows users to sign up.
+	 * @return {boolean} A value that determines whether users can sign up.
+	 */
 	get allowSignup() {
-		this._getProperty('allowSignup');
+		this._getDataProperty('allowSignup');
 	}
 
+	/**
+	 * Sets a value that determines whether this project allows users to sign up.
+	 * @param  {boolean} 	value 	A value that determines whether users can sign up.
+	 * @return {void} 	
+	 */
 	set allowSignup(value) {
-		this._setProperty('allowSignup', value);
+		this._setDataProperty('allowSignup', value);
 	}
 
 	/**
@@ -106,7 +118,7 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * Fetches the current server time from the server.
-	 * @returns {Promise<Date, SkyGridException>} A promise that resolves to the fetched time.
+	 * @returns {Promise<Date, SkyGridError>} A promise that resolves to the fetched time.
 	 */
 	fetchServerTime() {
 		return this._api.request('getServerTime').then(time => {
@@ -117,9 +129,9 @@ export default class Project extends SkyGridObject {
 	}
 
 	/**
-	 * [loginMaster description]
-	 * @param  {string} masterKey [description]
-	 * @returns {[type]}           [description]
+	 * Logs in as the master (super) user.
+	 * @param  {string} 	masterKey 	The master key for this project.
+	 * @returns {Promise<void, SkyGridError>} A promise that resolves once the master user has logged in.
 	 * @private
 	 */
 	loginMaster(masterKey) {
@@ -130,9 +142,9 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * Logs in as the specified user.
-	 * @param  {string} email    Email of the user to log in as
-	 * @param  {string} password Password of the user
-	 * @returns {Promise}        A promise that resolves once the user has been logged in.
+	 * @param  {string} 	email    	Email of the user to log in as
+	 * @param  {string} 	password 	Password of the user
+	 * @returns {Promise<void, SkyGridError>} 	A promise that resolves once the user has been logged in.
 	 */
 	login(email, password) {
 		return this._api.request('login', { 
@@ -149,7 +161,7 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * Logs out the currently logged in user.
-	 * @returns {Promise} A promise that resolves once the user has been logged out.
+	 * @returns {Promise<void, SkyGridError>} A promise that resolves once the user has been logged out.
 	 */
 	logout() {
 		return this._api.request('logout').then(() => {
@@ -162,7 +174,7 @@ export default class Project extends SkyGridObject {
 	 * @param  {string} email    Email address of the user,.
 	 * @param  {string} password Password of the user.
 	 * @param  {object} meta     Associated block of meta data to be associated with the user.
-	 * @returns {Promise<User, SkyGridException>} A promise that resolves to the created User.
+	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User.
 	 */
 	signup(email, password, meta) {
 		return this._api.request('signup', { 
@@ -187,7 +199,7 @@ export default class Project extends SkyGridObject {
 	 * Finds users that adhere to the specified constraints.
 	 * @param  {object}  [constraints] 	The constraints to apply to the search.
 	 * @param  {Boolean} [fetch]		Determines whether the full user object should be fetched, or just the description.  Defaults to true.
-	 * @returns {Promise<User, SkyGridException>} A promise that resolves to an array of all users that were found.
+	 * @returns {Promise<User, SkyGridError>} A promise that resolves to an array of all users that were found.
 	 */
 	users(constraints, fetch = true) {
 		return this._api.request('findUsers', { 
@@ -224,7 +236,7 @@ export default class Project extends SkyGridObject {
 	 * Finds schemas that adhere to the specified constraints.
 	 * @param  {object}  [constraints] 	The constraints to apply to the search.
 	 * @param  {Boolean} [fetch]		Determines whether the full schema object should be fetched, or just the description.  Defaults to true.
-	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to an array of all schemas that were found.
+	 * @returns {Promise<Schema, SkyGridError>} A promise that resolves to an array of all schemas that were found.
 	 */
 	schemas(constraints, fetch = true) {
 		return this._api.request('findDeviceSchemas', { 
@@ -272,7 +284,7 @@ export default class Project extends SkyGridObject {
 	 * Finds devices that adhere to the specified constraints.
 	 * @param  {object}  [constraints] 	The constraints to apply to the search.
 	 * @param  {Boolean} [fetch]		Determines whether the full device object should be fetched, or just the description.  Defaults to true.
-	 * @returns {Promise<Device, SkyGridException>} A promise that resolves to an array of all devices that were found.
+	 * @returns {Promise<Device, SkyGridError>} A promise that resolves to an array of all devices that were found.
 	 */
 	devices(constraints, fetch = true) {
 		return this._api.request('findDevices', { 
@@ -287,7 +299,7 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * Fetches the current state of this project.
-	 * @returns {Promise<Project, SkyGridException>} A promise that resolves to this instance of the project.
+	 * @returns {Promise<Project, SkyGridError>} A promise that resolves to this instance of the project.
 	 *
 	 * @example
 	 * project.fetch().then(() => {
@@ -304,11 +316,11 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * Saves the changes that have been made to the project to the SkyGrid server.
-	 * @returns {Promise<Project, SkyGridException>} A promise that resolves to this instance of the project.
+	 * @returns {Promise<Project, SkyGridError>} A promise that resolves to this instance of the project.
 	 */
 	save() {
 		if (this._api.usingMasterKey !== true) {
-			throw new SkyGridException('Can only edit users when using the master key');
+			throw new SkyGridError('Can only edit users when using the master key');
 		}
 
 		return this._saveChanges({
@@ -325,9 +337,10 @@ export default class Project extends SkyGridObject {
 	 * Subscribes to all changes made to devices belonging to this project via the SkyGrid back end.
 	 *   
 	 * NOTE: Subscribing is currently only available when using socket based communication methods.
-	 * 
-	 * @param  {Function} [callback] Optional callback that is raised when an update is received.
-	 * @returns {Promise<Number, SkyGridException>} A promise that resolves to the ID of the subscription.
+	 *
+	 * @param {object} 		[settings] 	Optional additional settings that determine how the subscription is handled (currently unused).
+	 * @param {function} 	callback 	Callback that is raised when an update is received.
+	 * @returns {Promise<Number, SkyGridError>} A promise that resolves to the ID of the subscription.
 	 *
 	 * @example
 	 * device.subscribe();
@@ -340,6 +353,10 @@ export default class Project extends SkyGridObject {
 	 * });
 	 */
 	subscribe(settings, callback) {
+		if (!callback) {
+			callback = settings;
+		}
+
 		return Promise.resolve().then(() => {
 			if (this._serverSubId === null) {
 				return this._subManager.addSubscription({
@@ -364,7 +381,7 @@ export default class Project extends SkyGridObject {
 	/**
 	 * Unsubscribes the specified ID or callback from this project.
 	 * If no ID or callback is specified, all subscriptions are removed.
-	 * @param  {Number|Function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
+	 * @param  {number|function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
 	 * @return {Promise} A promise that resolves once the subscription has been removed.
 	 */
 	unsubscribe(id) {
@@ -372,12 +389,12 @@ export default class Project extends SkyGridObject {
 			if (typeof id === 'function') {
 				id = this._findSubId(id);
 				if (id === null) {
-					throw new SkyGridException('Subscription does not exist');
+					throw new SkyGridError('Subscription does not exist');
 				}
 			}
 
 			if (this._subCallbacks[id] === undefined) {
-				throw new SkyGridException('Subscription does not exist');
+				throw new SkyGridError('Subscription does not exist');
 			} 
 
 			delete this._subCallbacks[id];
@@ -398,8 +415,12 @@ export default class Project extends SkyGridObject {
 		return this._subManager.removeSubscriptions();
 	}
 
+	/**
+	 * Closes this project and removes all previously created subscriptions.
+	 * @return {Promise<void, SkyGridError>} A promises that resolves once the project has been closed.
+	 */
 	close() {
-		return this.removeSubscriptions().then(() => {
+		return this.unsubscribeAll().then(() => {
 			return this._api.close();
 		}).then(() => {
 			clearInterval(this._timeInterval);
