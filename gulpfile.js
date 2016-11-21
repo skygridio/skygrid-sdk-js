@@ -1,4 +1,5 @@
 const gulp = require('gulp');
+const eslint = require('gulp-eslint');
 const sourcemaps = require('gulp-sourcemaps');
 const rename = require('gulp-rename');
 const babel = require('gulp-babel');
@@ -17,6 +18,13 @@ process.argv.map((item, idx) => {
 
 gulp.task('clean', function() {
 	return gulp.src(['lib/*', 'docs/*']).pipe(rm());
+});
+
+gulp.task('vet', function() {
+	return gulp.src('src/*.js')
+		.pipe(eslint())
+		.pipe(eslint.format())
+		.pipe(eslint.failAfterError());
 });
 
 gulp.task('compile', ['clean'], function() {

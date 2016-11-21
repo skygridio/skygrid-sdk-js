@@ -1,6 +1,10 @@
-import Acl from './Acl';
-import * as Util from './Util';
 import SkyGridObject from './SkyGridObject';
+import SkyGridError from './SkyGridError';
+
+import Acl from './Acl';
+import Schema from './Schema';
+
+import * as Util from './Util';
 
 /** 
  * Represents a device in the SkyGrid system.
@@ -132,11 +136,11 @@ export default class Device extends SkyGridObject {
 	 */
 	get properties() {
 		const ret = new Map();
-		for (let key in this._data.properties) {
+		for (const key in this._data.properties) {
 			ret.set(key, this._data.properties[key]);
 		}
 
-		for (let key in this._changes.properties) {
+		for (const key in this._changes.properties) {
 			ret.set(key, this._changes.properties[key]);
 		}
 
@@ -188,7 +192,7 @@ export default class Device extends SkyGridObject {
 	 */
 	save(properties) {
 		if (properties) {
-			for (let key in properties) {
+			for (const key in properties) {
 				this._changes.properties[key] = properties[key];
 				this._changed = true;
 			}
@@ -244,7 +248,7 @@ export default class Device extends SkyGridObject {
 	 * });
 	 */
 	history(start, end, limit) {
-		let data = { deviceId: this.id };
+		const data = { deviceId: this.id };
 		let constraints = {};
 
 		if (start) {
@@ -348,7 +352,7 @@ export default class Device extends SkyGridObject {
 					this._data = device._data;
 					this._fetched = true;
 
-					for (let key in this._subCallbacks) {
+					for (const key in this._subCallbacks) {
 						const subCallback = this._subCallbacks[key];
 						subCallback(changes, this);
 					}
@@ -402,7 +406,7 @@ export default class Device extends SkyGridObject {
 	 * @return {number|null} 	The ID of the subscription.  Returns null if no subscription is found.
 	 */
 	_findSubId(callback) {
-		for (let id in this._subCallbacks) {
+		for (const id in this._subCallbacks) {
 			if (this._subCallbacks[id] === callback) {
 				return id;
 			}

@@ -5,11 +5,11 @@ const PUBLIC_KEY = '*';
 
 function validateAccessType(accessType) {
 	switch (accessType) {
-	case 'create':
-	case 'read':
-	case 'update':
-	case 'delete':
-		return;
+		case 'create':
+		case 'read':
+		case 'update':
+		case 'delete':
+			return;
 	}
 
 	throw new Error(`Access type '${accessType}' invalid, must be one of the following: create, read, update, delete`);
@@ -128,7 +128,7 @@ export default class Acl {
 			userId = 'role:' + userId.getName();
 		}*/
 
-		let permissions = this._permissionsById[userId];
+		const permissions = this._permissionsById[userId];
 		if (!permissions) {
 			return null;
 		}
@@ -137,7 +137,7 @@ export default class Acl {
 	}
 
 	_removeAccess(userId, accessType) {
-		let acl = this._permissionsById[userId];
+		const acl = this._permissionsById[userId];
 		if (acl) {
 			if (accessType) {
 				validateAccessType(accessType);
