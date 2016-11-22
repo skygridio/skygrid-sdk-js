@@ -49,7 +49,7 @@ export default class RestApi extends Api {
 					method: 'post',
 					body: data
 				}).then((data) => {
-					this.token = data.token;
+					this._token = data.token;
 					return data;
 				});
 			},
