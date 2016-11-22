@@ -5,11 +5,12 @@ const PUBLIC_KEY = '*';
 
 function validateAccessType(accessType) {
 	switch (accessType) {
-		case 'create':
-		case 'read':
-		case 'update':
-		case 'delete':
-			return;
+	case 'create':
+	case 'read':
+	case 'update':
+	case 'delete':
+	case 'deviceKey':
+		return;
 	}
 
 	throw new Error(`Access type '${accessType}' invalid, must be one of the following: create, read, update, delete`);
