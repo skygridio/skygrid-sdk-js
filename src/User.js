@@ -1,4 +1,5 @@
 import SkyGridObject from './SkyGridObject';
+import SkyGridError from './SkyGridError';
 
 export default class User extends SkyGridObject {
 	constructor(api, data) {

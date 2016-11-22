@@ -33,8 +33,8 @@ export default class Project extends SkyGridObject {
 	/**
 	 * Create a project instance.  This should NEVER be called by the user.
 	 * To get actual project instances, use SkyGrid.project().
-	 * @param {SkyGridApi} 	api 	The API interface used to get device data from the SkyGrid servers.
-	 * @param {object} 		data 	The data that represents this device.
+	 * @param {string} 		projectId 	The ID of the project we wish to interact with.
+	 * @param {object} 		settings 	The data that represents this device.
 	 * @private
 	 */
 	constructor(projectId, settings) {
@@ -215,6 +215,7 @@ export default class Project extends SkyGridObject {
 	/**
 	 * [addSchema description]
 	 * @param {[type]} data [description]
+	 * @returns {Promise<Schema, SkyGridError>} [description]
 	 * @private
 	 */
 	addSchema(data) {
@@ -252,6 +253,7 @@ export default class Project extends SkyGridObject {
 	/**
 	 * [addDevice description]
 	 * @param {[type]} data [description]
+	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
 	addDevice(data) {
@@ -363,7 +365,7 @@ export default class Project extends SkyGridObject {
 					projectId: this.id
 				}, 
 				(changes, device) => {
-					for (let key in this._subCallbacks) {
+					for (const key in this._subCallbacks) {
 						const subCallback = this._subCallbacks[key];
 						subCallback(changes, device);
 					}
@@ -411,7 +413,7 @@ export default class Project extends SkyGridObject {
 		return Promise.resolve();
 	}
 
-	unsubscribeAll(id) {
+	unsubscribeAll() {
 		return this._subManager.removeSubscriptions();
 	}
 

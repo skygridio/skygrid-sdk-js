@@ -1,6 +1,6 @@
 {
   "name": "skygrid",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "The SkyGrid JavaScript SDK",
   "main": "lib/SkyGrid.js",
   "scripts": {
@@ -34,8 +34,10 @@
     "browserify": "^13.0.0",
     "envify": "^3.4.1",
     "esdoc": "^0.4.8",
+    "eslint": "^3.10.2",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
+    "gulp-eslint": "^3.0.1",
     "gulp-rename": "^1.2.2",
     "gulp-rimraf": "^0.2.0",
     "gulp-size": "^2.1.0",

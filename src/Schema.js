@@ -1,6 +1,5 @@
-import Acl from './Acl';
-import * as Util from './Util';
 import SkyGridObject from './SkyGridObject';
+import SkyGridError from './SkyGridError';
 
 /**
  * Represents a device schema in the SkyGrid system.
@@ -97,11 +96,11 @@ export default class Schema extends SkyGridObject {
 	 */
 	get properties() {
 		const ret = new Map();
-		for (let key in this._data.properties) {
+		for (const key in this._data.properties) {
 			ret.set(key, this._data.properties[key]);
 		}
 
-		for (let key in this._changes.properties) {
+		for (const key in this._changes.properties) {
 			ret.set(key, this._changes.properties[key]);
 		}
 
@@ -134,7 +133,7 @@ export default class Schema extends SkyGridObject {
 	 * @private
 	 */
 	updateProperty(name, type, def) {
-		let prop = this._changes[name];
+		const prop = this._changes[name];
 		if (prop) {
 			if (type) {
 				prop.type = type;

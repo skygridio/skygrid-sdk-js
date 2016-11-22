@@ -129,7 +129,7 @@ export default class Acl {
 			userId = 'role:' + userId.getName();
 		}*/
 
-		let permissions = this._permissionsById[userId];
+		const permissions = this._permissionsById[userId];
 		if (!permissions) {
 			return null;
 		}
@@ -138,7 +138,7 @@ export default class Acl {
 	}
 
 	_removeAccess(userId, accessType) {
-		let acl = this._permissionsById[userId];
+		const acl = this._permissionsById[userId];
 		if (acl) {
 			if (accessType) {
 				validateAccessType(accessType);
