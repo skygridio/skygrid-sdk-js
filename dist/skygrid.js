@@ -29,6 +29,7 @@ function validateAccessType(accessType) {
 		case 'read':
 		case 'update':
 		case 'delete':
+		case 'deviceKey':
 			return;
 	}
 
@@ -1462,7 +1463,7 @@ var RestApi = function (_Api) {
 					method: 'post',
 					body: data
 				}).then(function (data) {
-					_this.token = data.token;
+					_this._token = data.token;
 					return data;
 				});
 			},
@@ -1827,27 +1828,6 @@ var Schema = function (_SkyGridObject) {
 		,
 		set: function set(value) {
 			this._setDataProperty('name');
-		}
-
-		/**
-   * Gets the description of this schema.
-   * @returns {string} Description of the schema.
-   */
-
-	}, {
-		key: 'description',
-		get: function get() {
-			return this._getDataProperty('description');
-		}
-
-		/**
-   * Sets the description of this schema.
-   * @param {string} value Description of the schema
-   * @returns {void}
-   */
-		,
-		set: function set(value) {
-			this._setDataProperty('description');
 		}
 
 		/**
@@ -2501,7 +2481,7 @@ var User = function (_SkyGridObject) {
 	}, {
 		key: 'email',
 		get: function get() {
-			this._getDataProperty('email');
+			return this._getDataProperty('email');
 		},
 		set: function set(value) {
 			this._setDataProperty('email', value);
@@ -2509,7 +2489,7 @@ var User = function (_SkyGridObject) {
 	}, {
 		key: 'meta',
 		get: function get() {
-			this._getDataProperty('meta');
+			return this._getDataProperty('meta');
 		},
 		set: function set(value) {
 			this._setDataProperty('meta', value);
