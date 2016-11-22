@@ -1,4 +1,4 @@
-import SkyGridException from './SkyGridException';
+import SkyGridError from './SkyGridError';
 
 /**
  * @private
@@ -40,12 +40,12 @@ export default class SubscriptionManager {
 		if (sub) {
 			sub.callback(changes, device);
 		} else {
-			throw new SkyGridException('Subscription not found');
+			throw new SkyGridError('Subscription not found');
 		}
 	}
 
 	requestSubscriptions() {
-		for (let id in this._subscriptions) {
+		for (const id in this._subscriptions) {
 			const sub = this._subscriptions[id];
 			if (sub.active === false) {
 				this._requestSubscription(sub);
@@ -54,17 +54,16 @@ export default class SubscriptionManager {
 	}
 
 	invalidateSubscriptions() {
-		for (let id in this._subscriptions) {
+		for (const id in this._subscriptions) {
 			this._subscriptions[id].active = false;
 		}
 	}
 
 	removeSubscriptions() {
-		if (this._api) {
+		if (this._api) { 
 			const promises = [];
-
-			for (let s in this._subscriptions) {
-				promises.push(this._subscriptions[s].settings.subscriptionId);
+			for (const id in this._subscriptions) {
+				promises.push(this.removeSubscription(id));
 			}
 
 			return Promise.all(promises).then(() => {

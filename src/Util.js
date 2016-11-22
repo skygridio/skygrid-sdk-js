@@ -1,8 +1,11 @@
 /**
+ * Gets a value determining whether the specified object contains any keys.
+ * @param {object} obj The object to check.
+ * @returns {boolean} True if the object contains keys.
  * @private
  */
 export function objectEmpty(obj) {
-	for (let key in obj) {
+	for (const key in obj) {
 		return false;
 	}
 
@@ -21,17 +24,22 @@ export function deepClone(obj) {
 }
 
 /**
+ * [mergeFields description]
+ * @param  {[type]} target [description]
+ * @param  {[type]} source [description]
+ * @param  {[type]} fields [description]
+ * @return {[type]}        [description]
  * @private
  */
 export function mergeFields(target, source, fields) {
 	fields.map(fieldName => {
-		let sourceField = source[fieldName];
+		const sourceField = source[fieldName];
 		if (sourceField !== undefined) {
 			if (typeof sourceField !== 'object') {
 				target[fieldName] = sourceField;
 			} else {
-				let targetField = target[fieldName];
-				for (let key in sourceField) {
+				const targetField = target[fieldName];
+				for (const key in sourceField) {
 					targetField[key] = sourceField[key];
 				}
 			}
@@ -40,6 +48,10 @@ export function mergeFields(target, source, fields) {
 }
 
 /**
+ * [mergeAcl description]
+ * @param  {[type]} data    [description]
+ * @param  {[type]} changes [description]
+ * @return {[type]}         [description]
  * @private
  */
 export function mergeAcl(data, changes) {
@@ -53,10 +65,14 @@ export function mergeAcl(data, changes) {
 }
 
 /**
+ * [prepareChanges description]
+ * @param  {[type]} changes [description]
+ * @param  {[type]} ret     [description]
+ * @return {[type]}         [description]
  * @private
  */
 export function prepareChanges(changes, ret) {
-	for (let key in changes) {
+	for (const key in changes) {
 		if (key !== 'acl') {
 			ret[key] = changes[key];
 		} else if (changes.acl !== null) {
@@ -70,6 +86,9 @@ export function prepareChanges(changes, ret) {
 }
 
 /**
+ * [fixDataDates description]
+ * @param  {[type]} data [description]
+ * @return {[type]}      [description]
  * @private
  */
 export function fixDataDates(data) {

@@ -1,12 +1,12 @@
 import Api from './Api';
-import SkyGridException from './SkyGridException';
-import ValidationException from './ValidationException';
+import SkyGridError from './SkyGridError';
+import ValidationError from './ValidationError';
 import io from 'socket.io-client';
 
 /**
  * @private
  */
-export default class SocketApi extends Api {
+export default class SocketIoApi extends Api {
 	constructor(address, projectId) {
 		super(); 
 		
@@ -69,14 +69,14 @@ export default class SocketApi extends Api {
 			request.data = data;
 		}
 
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			this._socket.emit('message', request, response => {
 				if (response.status === 'ok') {
 					resolve(response.data);
 				} else if (typeof response.data === 'string') {
-					throw new SkyGridException(response.data);
+					throw new SkyGridError(response.data);
 				} else {
-					throw new ValidationException(response.data);
+					throw new ValidationError(response.data);
 				}				
 			});
 		});

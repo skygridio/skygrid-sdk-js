@@ -1,15 +1,15 @@
-import Acl from './Acl';
-import * as Util from './Util';
+import SkyGridObject from './SkyGridObject';
+import SkyGridError from './SkyGridError';
 
 /**
  * Represents a device schema in the SkyGrid system.
  */
-export default class Schema {
+export default class Schema extends SkyGridObject {
 	/**
 	 * Create a schema instance.  This should NEVER be called by the user.
 	 * To get actual schema instances, use SkyGrid.schema() or one of the find() functions.
-	 * @param {SkyGridApi} api - The API interface used to get device data from the SkyGrid servers.
-	 * @param {object} data - The data that represents this device.
+	 * @param {SkyGridApi} 	api 	The API interface used to get device data from the SkyGrid servers.
+	 * @param {object} 		data 	The data that represents this device.
 	 * @private
 	 */
 	constructor(api, data) {
@@ -17,12 +17,11 @@ export default class Schema {
 			throw new Error('No schema data/ID supplied');
 		}
 
-		this._api = api;
-		this._data = data;
+		super();
 
-		this._changes = { properties: {} };
-		this._fetched = false;
-		this._changed = false;
+		this._api = api;
+		this._changeDefaults = { properties: {} };
+		this.discardChanges();
 
 		if (typeof data === 'object') {
 			this._data = data;
@@ -30,15 +29,9 @@ export default class Schema {
 		} 
 		else if (typeof data === 'string') {
 			this._data = { id: data, properties: {} };
+		} else {
+			throw new Error('Schema data is of an unknown type');
 		}
-	}
-
-	/**
-	 * Gets the unique ID of this schema.
-	 * @returns {string} The unique ID of this schema.
-	 */
-	get id() {
-		return this._data.id;
 	}
 
 	/**
@@ -46,11 +39,7 @@ export default class Schema {
 	 * @param {string} value - The name of the schema.
 	 */
 	get name() {
-		if (this._changes.name) {
-			return this._changes.name;
-		}
-
-		return this._data.name;
+		return this._getDataProperty('name');
 	}
 
 	/**
@@ -58,30 +47,7 @@ export default class Schema {
 	 * @param {string} value - The name of the schema.
 	 */
 	set name(value) {
-		this._changes.name = value;
-		this._changed = true;
-	}
-
-	/**
-	 * Gets the description of this schema.
-	 * @returns {string} Description of the schema.
-	 */
-	get description() {
-		if (this._changes.description) {
-			return this._changes.description;
-		}
-
-		return this._data.description;
-	}
-
-	/**
-	 * Sets the description of this schema.
-	 * @param {string} value Description of the schema
-	 * @returns {void}
-	 */
-	set description(value) {
-		this._changes.description = value;
-		this._changed = true;
+		this._setDataProperty('name');
 	}
 
 	/**
@@ -90,17 +56,7 @@ export default class Schema {
 	 * @private
 	 */
 	get acl() {
-		if (!this._changes.acl) {
-			if (this._data.acl) {
-				this._changes.acl = new Acl(this._data.acl);
-			} else {
-				this._changes.acl = new Acl();
-			}
-
-			this._changed = true;
-		}
-
-		return this._changes.acl;
+		return this._getAclProperty();
 	}
 
 	/**
@@ -108,57 +64,43 @@ export default class Schema {
 	 * @param {object|Acl} value The ACL object.
 	 */
 	set acl(value) {
-		if (value && typeof value === 'object') {
-			if (!(value instanceof Acl)) {
-				value = new Acl(value);
-			}
-		}
-
-		this._changes.acl = value;
-		this._changed = true;
+		this._setAclProperty(value);
 	}
-
+	
 	/**
-	 * Gets a value deteremining whether this class is complete (has been fetched from the server).
-	 * @returns {boolean} True if the schema has been fetched.
-	 */
-	get isComplete() {
-		return this._fetched !== true;
-	}
-
-	/**
-	 * Gets a value deteremining whether unsaved changes have been made to this schema.
-	 * @returns {boolean} True if the schema has unsaved changes.
-	 * @private
-	 */
-	get isDirty() {
-		return this._changed === true;
-	}
-
-	/**
-	 * Gets an array of strings that contains the names of all available properties.
-	 * @returns {string[]} A string array of all property names.
+	 * Gets a Map of properties and their descriptors.  This map is a copy of the internal
+	 * state, and as a result changes will not be reflected on the Schema object.
+	 * @returns {Map<string,object>} A map of properties and their descriptors.
+	 *
+	 * @example
+	 * for (let [key, desc] of schema.properties) {
+	 *     console.log(key + " = " + JSON.stringify(desc));
+	 * }
 	 */
 	get properties() {
-		const names = Object.keys(this._data.properties);
-		for (let key in this._changes.properties) {
-			names[key] = this._changes.properties[key];
+		const ret = new Map();
+		for (const key in this._data.properties) {
+			ret.set(key, this._data.properties[key]);
 		}
 
-		return names;
+		for (const key in this._changes.properties) {
+			ret.set(key, this._changes.properties[key]);
+		}
+
+		return ret;
 	}
 
 	/**
 	 * Adds a new property to the schema.
-	 * @param {string} name   The name of the property.
-	 * @param {object} schema The schema that details the content of the property.
-	 * @param {any} def    	  The default value of the property.  Must be relational to the schema!
+	 * @param {string} 	name   	The name of the property.
+	 * @param {object} 	type 	The type that details the content of the property.
+	 * @param {any} 	def 	The default value of the property.  Must be relational to the type!
 	 * @returns {void}
 	 * @private
 	 */
-	addProperty(name, schema, def) {
+	addProperty(name, type, def) {
 		this._changes.properties[name] = {
-			schema: schema,
+			type: type,
 			default: def
 		};
 
@@ -167,17 +109,17 @@ export default class Schema {
 
 	/**
 	 * Updates a property.
-	 * @param {string} name   The name of the property.
-	 * @param {object} schema The schema that details the content of the property.
-	 * @param {any} def    	  The default value of the property.  Must be relational to the schema!
+	 * @param {string} 	name   	The name of the property.
+	 * @param {object}	type 	The type that details the content of the property.
+	 * @param {any} 	def 	The default value of the property.  Must be relational to the type!
 	 * @returns {void}
 	 * @private
 	 */
-	updateProperty(name, schema, def) {
-		let prop = this._changes[name];
+	updateProperty(name, type, def) {
+		const prop = this._changes[name];
 		if (prop) {
-			if (schema) {
-				prop.schema = schema;
+			if (type) {
+				prop.type = type;
 			}
 
 			if (def) {
@@ -215,42 +157,33 @@ export default class Schema {
 	 * @private
 	 */
 	removeProperty(name) {
-		this._changes[name] = null;
+		this._changes.properties[name] = null;
 		this._changed = true;
 	}
 
 	/**
 	 * Saves all changes that have been made since the last save.
-	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to this instance of the schema.
+	 * @returns {Promise<Schema, SkyGridError>} A promise that resolves to this instance of the schema.
 	 * @private
 	 */
 	save() {
 		if (this._api.usingMasterKey !== true) {
-			throw new SkyGridException('Can only edit users when using the master key');
+			throw new SkyGridError('Can only edit schemas when using the master key');
 		}
 
-		if (this._changed === true) {
-			let changes = Util.prepareChanges(this._changes, {
+		return this._saveChanges({
+			default: {
 				schemaId: this.id
-			});
-
-			return this._api.request('updateDeviceSchema', changes).then(() => {
-				Util.mergeFields(this._data, this._changes, ['name', 'description', 'properties']);
-				Util.mergeAcl(this._data, this._changes);
-
-				this._changes = { properties: {} };
-				this._changed = false;
-
-				return this;
-			});
-		}
-
-		return Promise.resolve(this);
+			},
+			requestName: 'updateDeviceSchema',
+			fields: ['name', 'description', 'properties'],
+			hasAcl: true
+		});
 	}
 
 	/**
 	 * Fetches the schema from the SkyGrid backend.
-	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to this instance of the schema.
+	 * @returns {Promise<Schema, SkyGridError>} A promise that resolves to this instance of the schema.
 	 *
 	 * @example
 	 * schema.fetch().then(() => {
@@ -260,32 +193,9 @@ export default class Schema {
 	 * });
 	 */
 	fetch() {
-		return this._api.request('fetchDeviceSchema', { 
+		return this._fetch('fetchDeviceSchema', { 
 			schemaId: this.id 
-		}).then(data => {
-			this._data = data;
-			this._fetched = true;
-			return this;
 		});
-	}
-
-	/**
-	 * Fetches the schema from the SkyGrid backend if it has not yet been fetched.
-	 * @returns {Promise<Schema, SkyGridException>} A promise that resolves to this instance of the schema.
-	 *
-	 * @example
-	 * schema.fetchIfNeeded().then(() => {
-	 *	   // Schema state has been successfully fetched
-	 * }).catch(err => {
-	 *     // Handle errors here
-	 * });
-	 */
-	fetchIfNeeded() {
-		if (this._fetched !== true) {
-			return this.fetch();
-		}
-
-		return Promise.resolve(this);
 	}
 
 	/**
@@ -307,14 +217,5 @@ export default class Schema {
 	 */
 	remove() {
 		return this._api.request('deleteDeviceSchema', { schemaId: this.id });
-	}
-
-	/**
-	 * Discards all changes that have been applied since the schema was last saved.
-	 * @returns {void}
-	 * @private
-	 */
-	discardChanges() {
-		this._changes = { properties: {} };
 	}
 }

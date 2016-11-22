@@ -1,5 +1,5 @@
 import Api from './Api';
-import SkyGridException from './SkyGridException';
+import SkyGridError from './SkyGridError';
 
 function checkStatus(response) {
 	if (response.status >= 200 && response.status < 300) {
@@ -126,7 +126,7 @@ export default class RestApi extends Api {
 				return this._fetchJson(`/history/${data.deviceId}`, { method: 'get' });
 			},
 
-			getServerTime: data => {
+			getServerTime: () => {
 				return this._fetchJson('/time', { method: 'get' });
 			}
 		};
@@ -142,7 +142,7 @@ export default class RestApi extends Api {
 			return ep(data);
 		}
 
-		throw new SkyGridException(`API end point '${name}' does not exist on the REST API`);
+		throw new SkyGridError(`API end point '${name}' does not exist on the REST API`);
 	}
 
 	_fetchJson(url, params) {
