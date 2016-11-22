@@ -51,23 +51,6 @@ export default class Schema extends SkyGridObject {
 	}
 
 	/**
-	 * Gets the description of this schema.
-	 * @returns {string} Description of the schema.
-	 */
-	get description() {
-		return this._getDataProperty('description');
-	}
-
-	/**
-	 * Sets the description of this schema.
-	 * @param {string} value Description of the schema
-	 * @returns {void}
-	 */
-	set description(value) {
-		this._setDataProperty('description');
-	}
-
-	/**
 	 * Gets the Access-Control-List (ACL) associated with this schema.
 	 * @returns {Acl} The ACL associated with this schema.
 	 * @private
