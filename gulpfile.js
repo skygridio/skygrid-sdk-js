@@ -16,19 +16,25 @@ process.argv.map((item, idx) => {
 	}
 });
 
+const paths = {
+	scripts: 'src/**/*.js',
+	lib: 'lib/*',
+	docs: 'docs/*'
+};
+
 gulp.task('clean', function() {
-	return gulp.src(['lib/*', 'docs/*']).pipe(rm());
+	return gulp.src([paths.lib, paths.docs]).pipe(rm());
 });
 
 gulp.task('vet', function() {
-	return gulp.src('src/*.js')
+	return gulp.src(paths.scripts)
 		.pipe(eslint())
 		.pipe(eslint.format())
 		.pipe(eslint.failAfterError());
 });
 
 gulp.task('compile', ['clean'], function() {
-	return gulp.src('src/*.js')
+	return gulp.src(paths.scripts)
 		.pipe(sourcemaps.init())
 		.pipe(babel({ presets: ['es2015'] }))
 		.pipe(sourcemaps.write())

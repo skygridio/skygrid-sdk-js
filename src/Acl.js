@@ -5,7 +5,7 @@ const PUBLIC_KEY = '*';
 
 function validateAccessType(accessType) {
 	switch (accessType) {
-	  case 'create':
+		case 'create':
 		case 'read':
 		case 'update':
 		case 'delete':
