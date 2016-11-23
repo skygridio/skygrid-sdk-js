@@ -15,7 +15,7 @@ bower install --save skygrid
 
 CDN:
 ```
-https://cdn.skygrid.io/sdk/js/skygrid-0.2.1.min.js
+https://cdn.skygrid.io/sdk/js/skygrid-0.2.2.min.js
 ```
 
 The SDK itself makes heavy use of ES6 Promises.  As a result of this to enable support in some browsers requires a polyfill,
