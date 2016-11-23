@@ -1,16 +1,16 @@
-import User from './User';
+//import User from './User';
 import * as Util from './Util';
 
 const PUBLIC_KEY = '*';
 
 function validateAccessType(accessType) {
 	switch (accessType) {
-	case 'create':
-	case 'read':
-	case 'update':
-	case 'delete':
-	case 'deviceKey':
-		return;
+	  case 'create':
+		case 'read':
+		case 'update':
+		case 'delete':
+		case 'deviceKey':
+			return;
 	}
 
 	throw new Error(`Access type '${accessType}' invalid, must be one of the following: create, read, update, delete`);
@@ -82,6 +82,8 @@ export default class Acl {
 	_setAccess(userId, accessType, allowed) {
 		validateAccessType(accessType);
 
+		const User = require('./User');
+
 		if (userId instanceof User) {
 			userId = userId.id;
 		}// else if (userId instanceof Role) {
@@ -122,6 +124,8 @@ export default class Acl {
 
 	_getAccess(userId, accessType) {
 		validateAccessType(accessType);
+
+		const User = require('./User');
 
 		if (userId instanceof User) {
 			userId = userId.id;
