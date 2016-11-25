@@ -167,7 +167,7 @@ export default class Schema extends SkyGridObject {
 	 * @private
 	 */
 	save() {
-		if (this._api.usingMasterKey !== true) {
+		if (!this._api._masterKey) {
 			throw new SkyGridError('Can only edit schemas when using the master key');
 		}
 

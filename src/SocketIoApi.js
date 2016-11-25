@@ -44,6 +44,10 @@ export default class SocketIoApi extends Api {
 	}
 
 	request(name, data) {
+		if (name === 'loginMaster') {
+			this._masterKey = data.masterKey;
+		}
+
 		if (this._session) {
 			return this._makeRequest(name, data);
 		}
