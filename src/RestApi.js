@@ -76,6 +76,10 @@ export default class RestApi extends Api {
 				return this._fetchJson(`/users/${data.userId}`, { method: 'delete' });
 			},
 
+			requestPasswordReset: data => {
+				return this._fetchJson('/users/requestPasswordReset', { method: 'post', body: data });
+			},
+
 			findDeviceSchemas: data => {
 				const url = generateQueryUrl('/schemas', data.constraints);
 				return this._fetchJson(url, { method: 'get' });

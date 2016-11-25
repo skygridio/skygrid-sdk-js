@@ -417,6 +417,12 @@ export default class Project extends SkyGridObject {
 		return this._subManager.removeSubscriptions();
 	}
 
+	requestPasswordReset(email) {
+		return this._api.request('requestPasswordReset', {
+			email: email
+		});
+	}
+
 	/**
 	 * Closes this project and removes all previously created subscriptions.
 	 * @return {Promise<void, SkyGridError>} A promises that resolves once the project has been closed.
