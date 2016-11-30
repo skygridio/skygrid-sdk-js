@@ -423,6 +423,14 @@ export default class Project extends SkyGridObject {
 		});
 	}
 
+	resetPassword(email, resetToken, password) {
+		return this._api.request('resetPassword', {
+			email: email,
+			resetToken: resetToken,
+			password: password
+		});
+	}
+
 	/**
 	 * Closes this project and removes all previously created subscriptions.
 	 * @return {Promise<void, SkyGridError>} A promises that resolves once the project has been closed.

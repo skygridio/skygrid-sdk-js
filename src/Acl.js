@@ -1,4 +1,3 @@
-import User from './User';
 import * as Util from './Util';
 
 const PUBLIC_KEY = '*';
@@ -82,6 +81,8 @@ export default class Acl {
 	_setAccess(userId, accessType, allowed) {
 		validateAccessType(accessType);
 
+		const User = require('./User');
+
 		if (userId instanceof User) {
 			userId = userId.id;
 		}// else if (userId instanceof Role) {
@@ -122,6 +123,8 @@ export default class Acl {
 
 	_getAccess(userId, accessType) {
 		validateAccessType(accessType);
+
+		const User = require('./User');
 
 		if (userId instanceof User) {
 			userId = userId.id;
