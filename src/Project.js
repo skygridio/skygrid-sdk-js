@@ -39,7 +39,7 @@ export default class Project extends SkyGridObject {
 	 */
 	constructor(projectId, settings) {
 		super();
-
+		
 		settings = parseSettings(settings);
 
 		switch (settings.api) {
@@ -49,6 +49,8 @@ export default class Project extends SkyGridObject {
 			case 'socketio': 
 				this._api = new SocketIoApi(settings.address, projectId);
 				break;
+			default:
+				throw new SkyGridError('Unsupported api type ${settings.api}');
 		}
 
 		this._projectId = projectId;

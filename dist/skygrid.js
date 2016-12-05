@@ -109,14 +109,6 @@ var Acl = function () {
 			if (userId.id) {
 				userId = userId.id;
 			}
-			/*
-   		const User = require('./User');
-   
-   		if (userId instanceof User) {
-   			userId = userId.id;
-   		}// else if (userId instanceof Role) {
-   			//userId = 'role:' + userId.getName();
-   		//}*/
 
 			if (typeof userId !== 'string') {
 				throw new TypeError('userId must be a string.');
@@ -157,12 +149,6 @@ var Acl = function () {
 			if (userId.id) {
 				userId = userId.id;
 			}
-			/*const User = require('./User');
-   		if (userId instanceof User) {
-   	userId = userId.id;
-   }/* else if (userId instanceof Role) {
-   	userId = 'role:' + userId.getName();
-   }*/
 
 			var permissions = this._permissionsById[userId];
 			if (!permissions) {
@@ -879,6 +865,8 @@ var Project = function (_SkyGridObject) {
 			case 'socketio':
 				_this._api = new _SocketIoApi2.default(settings.address, projectId);
 				break;
+			default:
+				throw new _SkyGridError2.default('Unsupported api type ${settings.api}');
 		}
 
 		_this._projectId = projectId;

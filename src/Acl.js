@@ -84,14 +84,6 @@ export default class Acl {
 		if (userId.id) {
 			userId = userId.id;
 		}
-/*
-		const User = require('./User');
-
-		if (userId instanceof User) {
-			userId = userId.id;
-		}// else if (userId instanceof Role) {
-			//userId = 'role:' + userId.getName();
-		//}*/
 
 		if (typeof userId !== 'string') {
 			throw new TypeError('userId must be a string.');
@@ -131,13 +123,6 @@ export default class Acl {
 		if (userId.id) {
 			userId = userId.id;
 		}
-		/*const User = require('./User');
-
-		if (userId instanceof User) {
-			userId = userId.id;
-		}/* else if (userId instanceof Role) {
-			userId = 'role:' + userId.getName();
-		}*/
 
 		const permissions = this._permissionsById[userId];
 		if (!permissions) {
