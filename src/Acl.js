@@ -81,13 +81,17 @@ export default class Acl {
 	_setAccess(userId, accessType, allowed) {
 		validateAccessType(accessType);
 
+		if (userId.id) {
+			userId = userId.id;
+		}
+/*
 		const User = require('./User');
 
 		if (userId instanceof User) {
 			userId = userId.id;
 		}// else if (userId instanceof Role) {
 			//userId = 'role:' + userId.getName();
-		//}
+		//}*/
 
 		if (typeof userId !== 'string') {
 			throw new TypeError('userId must be a string.');
@@ -124,7 +128,10 @@ export default class Acl {
 	_getAccess(userId, accessType) {
 		validateAccessType(accessType);
 
-		const User = require('./User');
+		if (userId.id) {
+			userId = userId.id;
+		}
+		/*const User = require('./User');
 
 		if (userId instanceof User) {
 			userId = userId.id;

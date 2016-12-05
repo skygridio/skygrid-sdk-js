@@ -84,13 +84,21 @@ export default class RestApi extends Api {
 				return this._fetchJson('/users/resetPassword', { method: 'post', body: data });
 			},
 
-			findDeviceSchemas: data => {
-				const url = generateQueryUrl('/schemas', data.constraints);
-				return this._fetchJson(url, { method: 'get' });
+			fetchProject: data => {
+				return this._fetchJson(`/projects/${data.projectId}`, { method: 'get' });
+			},
+
+			updateProject: data => {
+				return this._fetchJson(`/projects/${data.projectId}`, { method: 'put', body: data });
 			},
 
 			addDeviceSchema: data => {
 				return this._fetchJson('/schemas', { method: 'post', body: data });
+			},
+
+			findDeviceSchemas: data => {
+				const url = generateQueryUrl('/schemas', data.constraints);
+				return this._fetchJson(url, { method: 'get' });
 			},
 
 			fetchDeviceSchema: data => {

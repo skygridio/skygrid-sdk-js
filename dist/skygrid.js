@@ -106,13 +106,17 @@ var Acl = function () {
 		value: function _setAccess(userId, accessType, allowed) {
 			validateAccessType(accessType);
 
-			var User = require('./User');
-
-			if (userId instanceof User) {
+			if (userId.id) {
 				userId = userId.id;
-			} // else if (userId instanceof Role) {
-			//userId = 'role:' + userId.getName();
-			//}
+			}
+			/*
+   		const User = require('./User');
+   
+   		if (userId instanceof User) {
+   			userId = userId.id;
+   		}// else if (userId instanceof Role) {
+   			//userId = 'role:' + userId.getName();
+   		//}*/
 
 			if (typeof userId !== 'string') {
 				throw new TypeError('userId must be a string.');
@@ -150,13 +154,15 @@ var Acl = function () {
 		value: function _getAccess(userId, accessType) {
 			validateAccessType(accessType);
 
-			var User = require('./User');
-
-			if (userId instanceof User) {
+			if (userId.id) {
 				userId = userId.id;
-			} /* else if (userId instanceof Role) {
-     userId = 'role:' + userId.getName();
-     }*/
+			}
+			/*const User = require('./User');
+   		if (userId instanceof User) {
+   	userId = userId.id;
+   }/* else if (userId instanceof Role) {
+   	userId = 'role:' + userId.getName();
+   }*/
 
 			var permissions = this._permissionsById[userId];
 			if (!permissions) {
@@ -193,7 +199,7 @@ var Acl = function () {
 exports.default = Acl;
 
 
-},{"./User":13,"./Util":14}],2:[function(require,module,exports){
+},{"./Util":14}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1163,7 +1169,7 @@ var Project = function (_SkyGridObject) {
 		key: 'fetch',
 		value: function fetch() {
 			return this._fetch('fetchProject', {
-				deviceId: this.id
+				projectId: this.id
 			});
 		}
 
@@ -1175,8 +1181,8 @@ var Project = function (_SkyGridObject) {
 	}, {
 		key: 'save',
 		value: function save() {
-			if (this._api.usingMasterKey !== true) {
-				throw new _SkyGridError2.default('Can only edit users when using the master key');
+			if (!this._api._masterKey) {
+				throw new _SkyGridError2.default('Can only edit projects when using the master key');
 			}
 
 			return this._saveChanges({
@@ -1512,13 +1518,21 @@ var RestApi = function (_Api) {
 				return _this._fetchJson('/users/resetPassword', { method: 'post', body: data });
 			},
 
-			findDeviceSchemas: function findDeviceSchemas(data) {
-				var url = generateQueryUrl('/schemas', data.constraints);
-				return _this._fetchJson(url, { method: 'get' });
+			fetchProject: function fetchProject(data) {
+				return _this._fetchJson('/projects/' + data.projectId, { method: 'get' });
+			},
+
+			updateProject: function updateProject(data) {
+				return _this._fetchJson('/projects/' + data.projectId, { method: 'put', body: data });
 			},
 
 			addDeviceSchema: function addDeviceSchema(data) {
 				return _this._fetchJson('/schemas', { method: 'post', body: data });
+			},
+
+			findDeviceSchemas: function findDeviceSchemas(data) {
+				var url = generateQueryUrl('/schemas', data.constraints);
+				return _this._fetchJson(url, { method: 'get' });
 			},
 
 			fetchDeviceSchema: function fetchDeviceSchema(data) {
@@ -2480,7 +2494,7 @@ var User = function (_SkyGridObject) {
 	_createClass(User, [{
 		key: 'save',
 		value: function save() {
-			if (!this._api.masterKey) {
+			if (!this._api._masterKey) {
 				throw new _SkyGridError2.default('Can only edit users when using the master key');
 			}
 

@@ -37,7 +37,7 @@ export default class User extends SkyGridObject {
 	}
 
 	save() {
-		if (!this._api.masterKey) {
+		if (!this._api._masterKey) {
 			throw new SkyGridError('Can only edit users when using the master key');
 		}
 

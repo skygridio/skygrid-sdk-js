@@ -312,7 +312,7 @@ export default class Project extends SkyGridObject {
 	 */
 	fetch() {
 		return this._fetch('fetchProject', { 
-			deviceId: this.id 
+			projectId: this.id 
 		});
 	}
 
@@ -321,8 +321,8 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Project, SkyGridError>} A promise that resolves to this instance of the project.
 	 */
 	save() {
-		if (this._api.usingMasterKey !== true) {
-			throw new SkyGridError('Can only edit users when using the master key');
+		if (!this._api._masterKey) {
+			throw new SkyGridError('Can only edit projects when using the master key');
 		}
 
 		return this._saveChanges({
