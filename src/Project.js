@@ -12,11 +12,16 @@ import User from './User';
 import * as Util from './Util';
 
 const API_URL = process.env.SKYGRID_SERVER_ADDRESS || 'https://api.skygrid.io';
+const SOCKETIO_URL = process.env.SKYGRID_SOCKETIO_ADDRESS || 'https://api.skygrid.io:81';
 
 function parseSettings(settings) {
 	settings = settings || {};
 	if (!settings.api) {
 		settings.api = 'socketio';
+
+		if (!settings.address) {
+			settings.address = SOCKETIO_URL;
+		}
 	}
 
 	if (!settings.address) {
