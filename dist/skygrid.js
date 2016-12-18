@@ -766,6 +766,7 @@ exports.default = Device;
 
 
 },{"./Acl":1,"./Schema":7,"./SkyGridError":9,"./SkyGridObject":10,"./Util":14}],5:[function(require,module,exports){
+(function (process){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -823,11 +824,16 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var API_URL = null || 'https://api.skygrid.io';
+var SOCKETIO_URL = process.env.SKYGRID_SOCKETIO_ADDRESS || 'https://api.skygrid.io:81';
 
 function parseSettings(settings) {
 	settings = settings || {};
 	if (!settings.api) {
 		settings.api = 'socketio';
+
+		if (!settings.address) {
+			settings.address = SOCKETIO_URL;
+		}
 	}
 
 	if (!settings.address) {
@@ -1393,7 +1399,8 @@ var Project = function (_SkyGridObject) {
 exports.default = Project;
 
 
-},{"./Device":4,"./RestApi":6,"./Schema":7,"./SkyGridError":9,"./SkyGridObject":10,"./SocketIoApi":11,"./SubscriptionManager":12,"./User":13,"./Util":14}],6:[function(require,module,exports){
+}).call(this,require('_process'))
+},{"./Device":4,"./RestApi":6,"./Schema":7,"./SkyGridError":9,"./SkyGridObject":10,"./SocketIoApi":11,"./SubscriptionManager":12,"./User":13,"./Util":14,"_process":51}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2312,7 +2319,7 @@ var SocketIoApi = function (_Api) {
 exports.default = SocketIoApi;
 
 
-},{"./Api":2,"./SkyGridError":9,"./ValidationError":15,"socket.io-client":51}],12:[function(require,module,exports){
+},{"./Api":2,"./SkyGridError":9,"./ValidationError":15,"socket.io-client":52}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5452,7 +5459,7 @@ Polling.prototype.uri = function () {
   return schema + '://' + (ipv6 ? '[' + this.hostname + ']' : this.hostname) + port + this.path + query;
 };
 
-},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":49,"xmlhttprequest-ssl":36,"yeast":62}],35:[function(require,module,exports){
+},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":49,"xmlhttprequest-ssl":36,"yeast":63}],35:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -5730,7 +5737,7 @@ WS.prototype.check = function () {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":49,"ws":21,"yeast":62}],36:[function(require,module,exports){
+},{"../transport":30,"component-inherit":24,"debug":25,"engine.io-parser":38,"parseqs":49,"ws":21,"yeast":63}],36:[function(require,module,exports){
 (function (global){
 // browser shim for xmlhttprequest module
 
@@ -6550,7 +6557,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":39,"after":16,"arraybuffer.slice":17,"base64-arraybuffer":19,"blob":20,"has-binary":40,"wtf-8":61}],39:[function(require,module,exports){
+},{"./keys":39,"after":16,"arraybuffer.slice":17,"base64-arraybuffer":19,"blob":20,"has-binary":40,"wtf-8":62}],39:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -8184,6 +8191,188 @@ module.exports = function parseuri(str) {
 };
 
 },{}],51:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],52:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -8294,7 +8483,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":52,"./socket":54,"./url":55,"debug":25,"socket.io-parser":57}],52:[function(require,module,exports){
+},{"./manager":53,"./socket":55,"./url":56,"debug":25,"socket.io-parser":58}],53:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -8856,7 +9045,7 @@ Manager.prototype.onreconnect = function () {
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":53,"./socket":54,"backo2":18,"component-bind":22,"component-emitter":23,"debug":25,"engine.io-client":27,"indexof":44,"socket.io-parser":57}],53:[function(require,module,exports){
+},{"./on":54,"./socket":55,"backo2":18,"component-bind":22,"component-emitter":23,"debug":25,"engine.io-client":27,"indexof":44,"socket.io-parser":58}],54:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -8882,7 +9071,7 @@ function on (obj, ev, fn) {
   };
 }
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -9303,7 +9492,7 @@ Socket.prototype.compress = function (compress) {
   return this;
 };
 
-},{"./on":53,"component-bind":22,"component-emitter":23,"debug":25,"has-binary":42,"socket.io-parser":57,"to-array":60}],55:[function(require,module,exports){
+},{"./on":54,"component-bind":22,"component-emitter":23,"debug":25,"has-binary":42,"socket.io-parser":58,"to-array":61}],56:[function(require,module,exports){
 (function (global){
 
 /**
@@ -9382,7 +9571,7 @@ function url (uri, loc) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":25,"parseuri":50}],56:[function(require,module,exports){
+},{"debug":25,"parseuri":50}],57:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -9527,7 +9716,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":58,"isarray":45}],57:[function(require,module,exports){
+},{"./is-buffer":59,"isarray":45}],58:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -9933,7 +10122,7 @@ function error(data){
   };
 }
 
-},{"./binary":56,"./is-buffer":58,"component-emitter":59,"debug":25,"json3":46}],58:[function(require,module,exports){
+},{"./binary":57,"./is-buffer":59,"component-emitter":60,"debug":25,"json3":46}],59:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -9950,9 +10139,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 arguments[4][37][0].apply(exports,arguments)
-},{"dup":37}],60:[function(require,module,exports){
+},{"dup":37}],61:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -9967,7 +10156,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/wtf8 v1.0.0 by @mathias */
 ;(function(root) {
@@ -10205,7 +10394,7 @@ function toArray(list, index) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 'use strict';
 
 var alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'.split('')
