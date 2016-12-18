@@ -18,14 +18,14 @@ function parseSettings(settings) {
 	settings = settings || {};
 	if (!settings.api) {
 		settings.api = 'socketio';
-
-		if (!settings.address) {
-			settings.address = SOCKETIO_URL;
-		}
 	}
 
 	if (!settings.address) {
-		settings.address = API_URL;
+		if (settings.api === 'socketio') {
+			settings.address = SOCKETIO_URL;
+		} else {
+			settings.address = API_URL;
+		}
 	}
 
 	return settings;
