@@ -1184,7 +1184,7 @@ var Project = function (_SkyGridObject) {
 					projectId: this.id
 				},
 				requestName: 'updateProject',
-				fields: ['allowSignup'],
+				fields: ['allowSignup', 'meta'],
 				hasAcl: true
 			});
 		}
@@ -1379,6 +1379,27 @@ var Project = function (_SkyGridObject) {
 		,
 		set: function set(value) {
 			this._setAclProperty(value);
+		}
+
+		/**
+   * Gets the meta data block for this project.
+   * @return {object} The meta data block for this project.
+   */
+
+	}, {
+		key: 'meta',
+		get: function get() {
+			return this._getDataProperty('meta');
+		}
+
+		/**
+   * Sets ths meta data block for this project.
+   * @param  {object} value		The meta data block to associate with this project.
+   * @return {void}
+   */
+		,
+		set: function set(value) {
+			this._setDataProperty('meta', value);
 		}
 
 		/**

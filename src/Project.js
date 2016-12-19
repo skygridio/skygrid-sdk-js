@@ -116,6 +116,23 @@ export default class Project extends SkyGridObject {
 	}
 
 	/**
+	 * Gets the meta data block for this project.
+	 * @return {object} The meta data block for this project.
+	 */
+	get meta() {
+		return this._getDataProperty('meta');
+	}
+
+	/**
+	 * Sets ths meta data block for this project.
+	 * @param  {object} value		The meta data block to associate with this project.
+	 * @return {void}
+	 */
+	set meta(value) {
+		this._setDataProperty('meta', value);
+	}
+
+	/**
 	 * Returns the last fetched server time.
 	 * @returns {Date} The last fetched server time.
 	 */
@@ -337,7 +354,7 @@ export default class Project extends SkyGridObject {
 				projectId: this.id
 			},
 			requestName: 'updateProject',
-			fields: ['allowSignup'],
+			fields: ['allowSignup', 'meta'],
 			hasAcl: true
 		});
 	}
