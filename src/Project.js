@@ -55,7 +55,7 @@ export default class Project extends SkyGridObject {
 				this._api = new SocketIoApi(settings.address, projectId);
 				break;
 			default:
-				throw new SkyGridError('Unsupported api type ${settings.api}');
+				throw new SkyGridError(`Unsupported api type ${settings.api}`);
 		}
 
 		this._projectId = projectId;
