@@ -198,7 +198,7 @@ export default class Project extends SkyGridObject {
 	 * @param  {string} email    Email address of the user,.
 	 * @param  {string} password Password of the user.
 	 * @param  {object} meta     Associated block of meta data to be associated with the user.
-	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User.
+	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User's id.
 	 */
 	signup(email, password, meta) {
 		return this._api.request('signup', { 
@@ -206,7 +206,7 @@ export default class Project extends SkyGridObject {
 			password: password,
 			meta: meta
 		}).then(data => {
-			return this.user(data.id).fetch();
+			return data.id
 		});
 	}
 
