@@ -237,13 +237,12 @@ export default class Project extends SkyGridObject {
 	}
 
 	/**
-	 * [addSchema description]
-	 * @param {[type]} data [description]
-	 * @returns {Promise<Schema, SkyGridError>} [description]
-	 * @private
+	 * Adds a Schema to the associated project
+	 * @param {string} name			name of the schema
+	 * @param {object} properties 	properties of this schema (Defaults to true)
 	 */
-	addSchema(data) {
-		return this._api.request('addDeviceSchema', data).then(schema => {
+	addSchema(name,properties = {}) {
+		return this._api.request('addDeviceSchema', {name:name,properties:properties}).then(schema => {
 			return this.schema(schema.id).fetch();
 		});
 	}
