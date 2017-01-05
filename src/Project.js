@@ -275,22 +275,22 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * [addDevice description]
-	 * @param {[type]} data [description]
+	 * @param {string} name	name ofthe device
+	 * @param {string, object} 
 	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
-	addDevice(data) {
-		if (typeof data.schema === 'object') {
-			data.schemaId = data.schema.id;
+	addDevice(name, schema) {
+		if (typeof schema === 'object' && typeof schema.id === 'string')
+			schema = schema.id;
+			
+		if (typeof schema === 'string') {
+			return this._api.request('addDevice', {name:name, schemaId:schema}).then(device => {
+				return this.device(device.id).fetch();
+			});
 		} else {
-			data.schemaId = data.schema;
+			throw new SkyGridError('invalid schema')
 		}
-
-		delete data.schema;
-
-		return this._api.request('addDevice', data).then(device => {
-			return this.device(device.id).fetch();
-		});
 	}
 
 	/**
