@@ -62,10 +62,12 @@ gulp.task('minify', ['browserify'], function() {
 });
 
 gulp.task('test', ['browserify'], function() {
-	
+
 });
 
 gulp.task('browser', ['browserify']);
 gulp.task('deploy', ['browserify', 'minify']);
-
+gulp.task('watch',function(){
+	return gulp.watch(paths.scripts,['compile'])
+})
 gulp.task('default', ['deploy']);

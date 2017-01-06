@@ -27,6 +27,7 @@
     "url": "https://github.com/skygridio/skygrid-sdk-js/issues"
   },
   "dependencies": {
+    "node-fetch": "^1.6.3",
     "socket.io-client": "^1.4.8"
   },
   "devDependencies": {

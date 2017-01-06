@@ -55,7 +55,7 @@ export default class Project extends SkyGridObject {
 				this._api = new SocketIoApi(settings.address, projectId);
 				break;
 			default:
-				throw new SkyGridError('Unsupported api type ${settings.api}');
+				throw new SkyGridError(`Unsupported api type ${settings.api}`);
 		}
 
 		this._projectId = projectId;
@@ -198,7 +198,7 @@ export default class Project extends SkyGridObject {
 	 * @param  {string} email    Email address of the user,.
 	 * @param  {string} password Password of the user.
 	 * @param  {object} meta     Associated block of meta data to be associated with the user.
-	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User.
+	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User's id.
 	 */
 	signup(email, password, meta) {
 		return this._api.request('signup', { 
@@ -206,7 +206,7 @@ export default class Project extends SkyGridObject {
 			password: password,
 			meta: meta
 		}).then(data => {
-			return this.user(data.id).fetch();
+			return data.id
 		});
 	}
 
@@ -237,13 +237,12 @@ export default class Project extends SkyGridObject {
 	}
 
 	/**
-	 * [addSchema description]
-	 * @param {[type]} data [description]
-	 * @returns {Promise<Schema, SkyGridError>} [description]
-	 * @private
+	 * Adds a Schema to the associated project
+	 * @param {string} name			name of the schema
+	 * @param {object} properties 	properties of this schema (Defaults to true)
 	 */
-	addSchema(data) {
-		return this._api.request('addDeviceSchema', data).then(schema => {
+	addSchema(name,properties = {}) {
+		return this._api.request('addDeviceSchema', {name:name,properties:properties}).then(schema => {
 			return this.schema(schema.id).fetch();
 		});
 	}
@@ -276,22 +275,22 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * [addDevice description]
-	 * @param {[type]} data [description]
+	 * @param {string} name	name ofthe device
+	 * @param {string, object} 
 	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
-	addDevice(data) {
-		if (typeof data.schema === 'object') {
-			data.schemaId = data.schema.id;
+	addDevice(name, schema) {
+		if (typeof schema === 'object' && typeof schema.id === 'string')
+			schema = schema.id;
+			
+		if (typeof schema === 'string') {
+			return this._api.request('addDevice', {name:name, schemaId:schema}).then(device => {
+				return this.device(device.id).fetch();
+			});
 		} else {
-			data.schemaId = data.schema;
+			throw new SkyGridError('invalid schema')
 		}
-
-		delete data.schema;
-
-		return this._api.request('addDevice', data).then(device => {
-			return this.device(device.id).fetch();
-		});
 	}
 
 	/**

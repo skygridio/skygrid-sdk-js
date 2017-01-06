@@ -1,5 +1,6 @@
 import Api from './Api';
 import SkyGridError from './SkyGridError';
+import fetch from 'node-fetch'
 
 function checkStatus(response) {
 	if (response.status >= 200 && response.status < 300) {
@@ -15,7 +16,7 @@ function parseJSON(response) {
 	if (response.status !== 204) {
 		return response.json();
 	}
-	
+
 	return {};
 }
 
@@ -23,7 +24,6 @@ function generateQueryUrl(url, queries) {
 	if (queries) {
 		url += '?where=' + encodeURIComponent(JSON.stringify(queries));
 	}
-
 	return url;
 }
 
@@ -32,7 +32,7 @@ function generateQueryUrl(url, queries) {
  */
 export default class RestApi extends Api {
 	constructor(address, projectId) {
-		super(); 
+		super();
 
 		this._address = address;
 		this._projectId = projectId;
@@ -45,7 +45,7 @@ export default class RestApi extends Api {
 			},
 
 			login: data => {
-				return this._fetchJson('/login', { 
+				return this._fetchJson('/login', {
 					method: 'post',
 					body: data
 				}).then((data) => {
@@ -165,7 +165,7 @@ export default class RestApi extends Api {
 		if (!params.headers) {
 			params.headers = {};
 		}
-		
+
 		params.headers['Accept'] = 'application/json';
 		params.headers['Content-Type'] = 'application/json';
 
