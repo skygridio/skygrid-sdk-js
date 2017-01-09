@@ -150,6 +150,8 @@ export default class SkyGridObject {
 		return this._api.request(request, desc).then(data => {
 			this._data = data;
 			this._fetched = true;
+		}).then(() => {
+			return this;
 		});
 	}
 }
