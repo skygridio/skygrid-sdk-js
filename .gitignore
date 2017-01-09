@@ -1,4 +1,5 @@
 /node_modules
 /lib
 /docs
+/coverage
 /npm-debug.log
