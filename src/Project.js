@@ -28,6 +28,10 @@ function parseSettings(settings) {
 		}
 	}
 
+	if (settings.api === 'websocket' && !Util.hasWebSocketsupport()) {
+		settings.api = 'rest';
+	}
+
 	return settings;
 }
 
@@ -65,6 +69,7 @@ export default class Project extends SkyGridObject {
 		this._subCallbacks = {};
 		this._subCount = 0;
 		this._serverSubId = null;
+		this._user = null;
 
 		this._data = { id: projectId };
 		
@@ -466,6 +471,8 @@ export default class Project extends SkyGridObject {
 			this._projectId = null;
 			this._user = null;
 			this._timeInterval = null;
+			this._data = null;
+			this._changes = null;
 		});
 	}
 
