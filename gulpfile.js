@@ -80,4 +80,7 @@ gulp.task('deploy', ['browserify', 'minify']);
 gulp.task('watch',function(){
 	return gulp.watch(paths.scripts,['compile'])
 })
+gulp.task('watch-browser',['browserify'],function(){
+	return gulp.watch(paths.scripts,['browserify'])
+})
 gulp.task('default', ['deploy']);
