@@ -37,7 +37,7 @@ gulp.task('vet', () => {
 		.pipe(eslint.failAfterError());
 });
 
-gulp.task('compile', ['clean'], () => {
+gulp.task('compile', ['clean', 'vet'], () => {
 	return gulp.src(paths.scripts)
 		.pipe(sourcemaps.init())
 		.pipe(babel({ presets: ['es2015'] }))
