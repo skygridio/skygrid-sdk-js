@@ -78,9 +78,9 @@ export default class SocketIoApi extends Api {
 				if (response.status === 'ok') {
 					resolve(response.data);
 				} else if (typeof response.data === 'string') {
-					reject( new SkyGridError(response.data));
+					reject(new SkyGridError(response.data));
 				} else {
-					reject( new ValidationError(response.data));
+					reject(new ValidationError(response.data));
 				}				
 			});
 		});

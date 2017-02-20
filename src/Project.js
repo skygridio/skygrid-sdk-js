@@ -211,7 +211,7 @@ export default class Project extends SkyGridObject {
 			password: password,
 			meta: meta
 		}).then(data => {
-			return data.id
+			return data.id;
 		});
 	}
 
@@ -231,7 +231,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<User[], SkyGridError>} A promise that resolves to an array of all users that were found.
 	 */
 	users(constraints, fetch) {
-		if ( fetch == undefined) {
+		if (fetch === undefined) {
 			fetch = true;
 		}
 		return this._api.request('findUsers', {
@@ -248,12 +248,13 @@ export default class Project extends SkyGridObject {
 	 * Adds a Schema to the associated project
 	 * @param {string} name			name of the schema
 	 * @param {object} properties 	properties of this schema (Defaults to true)
+	 * @returns {Promise<Schema, SkyGridError>} a promise that resolves to a schema if the add succeeded
 	 */
 	addSchema(name,properties) {
-		if ( properties == undefined ) {
+		if (properties === undefined) {
 			properties = {};
 		}
-		return this._api.request('addDeviceSchema', {name:name,properties:properties}).then(schema => {
+		return this._api.request('addDeviceSchema', { name:name, properties:properties }).then(schema => {
 			return this.schema(schema.id).fetch();
 		});
 	}
@@ -274,7 +275,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Schema[], SkyGridError>} A promise that resolves to an array of all schemas that were found.
 	 */
 	schemas(constraints, fetch) {
-		if(fetch == undefined ) {
+		if (fetch === undefined) {
 			fetch = true;
 		}
 		return this._api.request('findDeviceSchemas', {
@@ -290,20 +291,21 @@ export default class Project extends SkyGridObject {
 	/**
 	 * [addDevice description]
 	 * @param {string} name	name ofthe device
-	 * @param {string, object}
+	 * @param {object} schema either the schema id or the schema object to be used with this new device 
 	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
 	addDevice(name, schema) {
-		if (typeof schema === 'object' && typeof schema.id === 'string')
+		if (typeof schema === 'object' && typeof schema.id === 'string') {
 			schema = schema.id;
+		}
 
 		if (typeof schema === 'string') {
-			return this._api.request('addDevice', {name:name, schemaId:schema}).then(device => {
+			return this._api.request('addDevice', { name:name, schemaId:schema }).then(device => {
 				return this.device(device.id).fetch();
 			});
 		} else {
-			throw new SkyGridError('invalid schema')
+			throw new SkyGridError('invalid schema');
 		}
 	}
 
@@ -326,7 +328,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Device[], SkyGridError>} A promise that resolves to an array of all devices that were found.
 	 */
 	devices(constraints, fetch) {
-		if ( fetch == undefined ) {
+		if (fetch === undefined) {
 			fetch = true;
 		}
 		return this._api.request('findDevices', {
