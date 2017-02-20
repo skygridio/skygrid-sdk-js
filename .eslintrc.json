@@ -70,6 +70,7 @@
     "no-class-assign": 2,
     "no-this-before-super": 2,
     "no-unmodified-loop-condition": 2,
+    "comma-spacing": 2,
 
     "semi": [2, "always"],
 
