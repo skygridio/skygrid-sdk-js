@@ -202,7 +202,7 @@ export default class Device extends SkyGridObject {
 			default: {
 				deviceId: this.id
 			},
-			requestName: 'updateDevice',
+			requestName: 'device.update',
 			fields: ['name', 'log', 'properties'],
 			hasAcl: true
 		});
@@ -220,7 +220,7 @@ export default class Device extends SkyGridObject {
 	 * });
 	 */
 	fetch() {
-		return this._fetch('fetchDevice', { 
+		return this._fetch('device.get', { 
 			deviceId: this.id 
 		}).then(() => {
 			Util.fixDataDates(this._data);
@@ -288,7 +288,7 @@ export default class Device extends SkyGridObject {
 			data.limit = limit;
 		}
 		
-		return this._api.request('fetchHistory', data).then(res => {
+		return this._api.request('device.history', data).then(res => {
 			res.map(item => { item.time = new Date(item.time); });
 			return res;
 		});
@@ -309,7 +309,7 @@ export default class Device extends SkyGridObject {
 	 * });
 	 */
 	remove() {
-		return this._api.request('deleteDevice', { deviceId: this.id });
+		return this._api.request('device.delete', { deviceId: this.id });
 	}
 
 	/**

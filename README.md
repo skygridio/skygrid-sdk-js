@@ -58,8 +58,8 @@ device.set('distance', 10);
 device.save().then(device => {
 	// Successfully saved
 });
-```
-You can also directly set properties in the save method:
+``
+`You can also directly set properties in the save method:
 ```javascript
 device.save({
 	speed: 100,

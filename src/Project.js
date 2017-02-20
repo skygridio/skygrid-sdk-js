@@ -2,7 +2,7 @@ import SubscriptionManager from './SubscriptionManager';
 import SkyGridError from './SkyGridError';
 import SkyGridObject from './SkyGridObject';
 
-import SocketIoApi from './SocketIoApi';
+import WebSocketApi from './WebSocketApi';
 import RestApi from './RestApi';
 
 import Device from './Device';
@@ -17,15 +17,11 @@ const SOCKETIO_URL = process.env.SKYGRID_SOCKETIO_ADDRESS || 'https://api.skygri
 function parseSettings(settings) {
 	settings = settings || {};
 	if (!settings.api) {
-		settings.api = 'socketio';
+		settings.api = 'websocket';
 	}
 
 	if (!settings.address) {
-		if (settings.api === 'socketio') {
-			settings.address = SOCKETIO_URL;
-		} else {
-			settings.address = API_URL;
-		}
+		settings.address = API_URL;
 	}
 
 	if (settings.api === 'websocket' && !Util.hasWebSocketsupport()) {
@@ -55,8 +51,8 @@ export default class Project extends SkyGridObject {
 			case 'rest': 
 				this._api = new RestApi(settings.address, projectId);
 				break;
-			case 'socketio': 
-				this._api = new SocketIoApi(settings.address, projectId);
+			case 'websocket': 
+				this._api = new WebSocketApi(settings.address, projectId);
 				break;
 			default:
 				throw new SkyGridError(`Unsupported api type ${settings.api}`);
@@ -164,7 +160,7 @@ export default class Project extends SkyGridObject {
 	 * @private
 	 */
 	loginMaster(masterKey) {
-		return this._api.request('loginMaster', {
+		return this._api.request('session.loginMaster', {
 			masterKey: masterKey
 		});
 	}
@@ -176,7 +172,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<void, SkyGridError>} 	A promise that resolves once the user has been logged in.
 	 */
 	login(email, password) {
-		return this._api.request('login', { 
+		return this._api.request('session.loginUser', { 
 			email: email, 
 			password: password
 		}).then(userData => {
@@ -193,7 +189,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<void, SkyGridError>} A promise that resolves once the user has been logged out.
 	 */
 	logout() {
-		return this._api.request('logout').then(() => {
+		return this._api.request('session.logout').then(() => {
 			this._user = null;
 		});
 	}
@@ -206,12 +202,12 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User's id.
 	 */
 	signup(email, password, meta) {
-		return this._api.request('signup', { 
+		return this._api.request('user.add', { 
 			email: email, 
 			password: password,
 			meta: meta
 		}).then(data => {
-			return data.id
+			return data.id;
 		});
 	}
 
@@ -231,7 +227,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<User[], SkyGridError>} A promise that resolves to an array of all users that were found.
 	 */
 	users(constraints, fetch = true) {
-		return this._api.request('findUsers', { 
+		return this._api.request('user.find', { 
 			constraints: constraints,
 			fetch: fetch
 		}).then(users => {
@@ -244,10 +240,13 @@ export default class Project extends SkyGridObject {
 	/**
 	 * Adds a Schema to the associated project
 	 * @param {string} name			name of the schema
-	 * @param {object} properties 	properties of this schema (Defaults to true)
+	 * @param {object} properties 	properties of this schema
 	 */
-	addSchema(name,properties = {}) {
-		return this._api.request('addDeviceSchema', {name:name,properties:properties}).then(schema => {
+	addSchema(name, properties = {}) {
+		return this._api.request('schema.add', { 
+			name: name, 
+			properties: properties
+		}).then(schema => {
 			return this.schema(schema.id).fetch();
 		});
 	}
@@ -268,7 +267,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Schema[], SkyGridError>} A promise that resolves to an array of all schemas that were found.
 	 */
 	schemas(constraints, fetch = true) {
-		return this._api.request('findDeviceSchemas', { 
+		return this._api.request('schema.find', { 
 			constraints: constraints,
 			fetch: fetch
 		}).then(schemas => {
@@ -280,21 +279,25 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * [addDevice description]
-	 * @param {string} name	name ofthe device
+	 * @param {string} name	name of the device
 	 * @param {string, object} 
 	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
 	addDevice(name, schema) {
-		if (typeof schema === 'object' && typeof schema.id === 'string')
+		if (typeof schema === 'object' && typeof schema.id === 'string') {
 			schema = schema.id;
+		}
 			
 		if (typeof schema === 'string') {
-			return this._api.request('addDevice', {name:name, schemaId:schema}).then(device => {
+			return this._api.request('device.add', { 
+				name: name, 
+				schemaId: schema
+			}).then(device => {
 				return this.device(device.id).fetch();
 			});
 		} else {
-			throw new SkyGridError('invalid schema')
+			throw new SkyGridError('Invalid schema');
 		}
 	}
 
@@ -317,7 +320,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Device[], SkyGridError>} A promise that resolves to an array of all devices that were found.
 	 */
 	devices(constraints, fetch = true) {
-		return this._api.request('findDevices', { 
+		return this._api.request('device.find', { 
 			constraints: constraints,
 			fetch: fetch
 		}).then(devices => {
@@ -339,7 +342,7 @@ export default class Project extends SkyGridObject {
 	 * });
 	 */
 	fetch() {
-		return this._fetch('fetchProject', { 
+		return this._fetch('project.get', { 
 			projectId: this.id 
 		});
 	}
@@ -357,7 +360,7 @@ export default class Project extends SkyGridObject {
 			default: {
 				projectId: this.id
 			},
-			requestName: 'updateProject',
+			requestName: 'project.update',
 			fields: ['allowSignup', 'meta'],
 			hasAcl: true
 		});
@@ -446,13 +449,13 @@ export default class Project extends SkyGridObject {
 	}
 
 	requestPasswordReset(email) {
-		return this._api.request('requestPasswordReset', {
+		return this._api.request('user.requestPasswordReset', {
 			email: email
 		});
 	}
 
 	resetPassword(email, resetToken, password) {
-		return this._api.request('resetPassword', {
+		return this._api.request('user.resetPassword', {
 			email: email,
 			resetToken: resetToken,
 			password: password
