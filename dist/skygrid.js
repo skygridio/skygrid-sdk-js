@@ -1018,12 +1018,11 @@ var Project = function (_SkyGridObject) {
 
 	}, {
 		key: 'users',
-		value: function users(constraints, fetch) {
+		value: function users(constraints) {
 			var _this5 = this;
 
-			if (fetch === undefined) {
-				fetch = true;
-			}
+			var fetch = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
 			return this._api.request('findUsers', {
 				constraints: constraints,
 				fetch: fetch
@@ -1043,12 +1042,11 @@ var Project = function (_SkyGridObject) {
 
 	}, {
 		key: 'addSchema',
-		value: function addSchema(name, properties) {
+		value: function addSchema(name) {
 			var _this6 = this;
 
-			if (properties === undefined) {
-				properties = {};
-			}
+			var properties = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
 			return this._api.request('addDeviceSchema', { name: name, properties: properties }).then(function (schema) {
 				return _this6.schema(schema.id).fetch();
 			});
@@ -1075,12 +1073,11 @@ var Project = function (_SkyGridObject) {
 
 	}, {
 		key: 'schemas',
-		value: function schemas(constraints, fetch) {
+		value: function schemas(constraints) {
 			var _this7 = this;
 
-			if (fetch === undefined) {
-				fetch = true;
-			}
+			var fetch = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
 			return this._api.request('findDeviceSchemas', {
 				constraints: constraints,
 				fetch: fetch
@@ -1094,7 +1091,7 @@ var Project = function (_SkyGridObject) {
 		/**
    * [addDevice description]
    * @param {string} name	name ofthe device
-   * @param {object} schema either the schema id or the schema object to be used with this new device 
+   * @param {object} schema either the schema id or the schema object to be used with this new device
    * @returns {Promise<Device, SkyGridError>} [description]
    * @private
    */
@@ -1141,12 +1138,11 @@ var Project = function (_SkyGridObject) {
 
 	}, {
 		key: 'devices',
-		value: function devices(constraints, fetch) {
+		value: function devices(constraints) {
 			var _this9 = this;
 
-			if (fetch === undefined) {
-				fetch = true;
-			}
+			var fetch = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
 			return this._api.request('findDevices', {
 				constraints: constraints,
 				fetch: fetch
@@ -6496,6 +6492,7 @@ module.exports = {
   "428": "Precondition Required",
   "429": "Too Many Requests",
   "431": "Request Header Fields Too Large",
+  "451": "Unavailable For Legal Reasons",
   "500": "Internal Server Error",
   "501": "Not Implemented",
   "502": "Bad Gateway",
@@ -27673,12 +27670,34 @@ try {
 	exports.blobConstructor = true
 } catch (e) {}
 
-var xhr = new global.XMLHttpRequest()
-// If XDomainRequest is available (ie only, where xhr might not work
-// cross domain), use the page location. Otherwise use example.com
-xhr.open('GET', global.XDomainRequest ? '/' : 'https://example.com')
+// The xhr request to example.com may violate some restrictive CSP configurations,
+// so if we're running in a browser that supports `fetch`, avoid calling getXHR()
+// and assume support for certain features below.
+var xhr
+function getXHR () {
+	// Cache the xhr value
+	if (xhr !== undefined) return xhr
+
+	if (global.XMLHttpRequest) {
+		xhr = new global.XMLHttpRequest()
+		// If XDomainRequest is available (ie only, where xhr might not work
+		// cross domain), use the page location. Otherwise use example.com
+		// Note: this doesn't actually make an http request.
+		try {
+			xhr.open('GET', global.XDomainRequest ? '/' : 'https://example.com')
+		} catch(e) {
+			xhr = null
+		}
+	} else {
+		// Service workers don't have XHR
+		xhr = null
+	}
+	return xhr
+}
 
 function checkTypeSupport (type) {
+	var xhr = getXHR()
+	if (!xhr) return false
 	try {
 		xhr.responseType = type
 		return xhr.responseType === type
@@ -27691,17 +27710,24 @@ function checkTypeSupport (type) {
 var haveArrayBuffer = typeof global.ArrayBuffer !== 'undefined'
 var haveSlice = haveArrayBuffer && isFunction(global.ArrayBuffer.prototype.slice)
 
-exports.arraybuffer = haveArrayBuffer && checkTypeSupport('arraybuffer')
+// If fetch is supported, then arraybuffer will be supported too. Skip calling
+// checkTypeSupport(), since that calls getXHR().
+exports.arraybuffer = exports.fetch || (haveArrayBuffer && checkTypeSupport('arraybuffer'))
+
 // These next two tests unavoidably show warnings in Chrome. Since fetch will always
 // be used if it's available, just return false for these to avoid the warnings.
 exports.msstream = !exports.fetch && haveSlice && checkTypeSupport('ms-stream')
 exports.mozchunkedarraybuffer = !exports.fetch && haveArrayBuffer &&
 	checkTypeSupport('moz-chunked-arraybuffer')
-exports.overrideMimeType = isFunction(xhr.overrideMimeType)
+
+// If fetch is supported, then overrideMimeType will be supported too. Skip calling
+// getXHR().
+exports.overrideMimeType = exports.fetch || (getXHR() ? isFunction(getXHR().overrideMimeType) : false)
+
 exports.vbArray = isFunction(global.VBArray)
 
 function isFunction (value) {
-  return typeof value === 'function'
+	return typeof value === 'function'
 }
 
 xhr = null // Help gc
@@ -27749,8 +27775,9 @@ var ClientRequest = module.exports = function (opts) {
 
 	var preferBinary
 	var useFetch = true
-	if (opts.mode === 'disable-fetch') {
-		// If the use of XHR should be preferred and includes preserving the 'content-type' header
+	if (opts.mode === 'disable-fetch' || 'timeout' in opts) {
+		// If the use of XHR should be preferred and includes preserving the 'content-type' header.
+		// Force XHR to be used since the Fetch API does not yet support timeouts.
 		useFetch = false
 		preferBinary = true
 	} else if (opts.mode === 'prefer-streaming') {
@@ -27808,7 +27835,7 @@ ClientRequest.prototype._onFinish = function () {
 	var opts = self._opts
 
 	var headersObj = self._headers
-	var body
+	var body = null
 	if (opts.method === 'POST' || opts.method === 'PUT' || opts.method === 'PATCH' || opts.method === 'MERGE') {
 		if (capability.blobConstructor) {
 			body = new global.Blob(self._body.map(function (buffer) {
@@ -27830,7 +27857,7 @@ ClientRequest.prototype._onFinish = function () {
 		global.fetch(self._opts.url, {
 			method: self._opts.method,
 			headers: headers,
-			body: body,
+			body: body || undefined,
 			mode: 'cors',
 			credentials: opts.withCredentials ? 'include' : 'same-origin'
 		}).then(function (response) {
@@ -27859,6 +27886,13 @@ ClientRequest.prototype._onFinish = function () {
 
 		if (self._mode === 'text' && 'overrideMimeType' in xhr)
 			xhr.overrideMimeType('text/plain; charset=x-user-defined')
+
+		if ('timeout' in opts) {
+			xhr.timeout = opts.timeout
+			xhr.ontimeout = function () {
+				self.emit('timeout')
+			}
+		}
 
 		Object.keys(headersObj).forEach(function (name) {
 			xhr.setRequestHeader(headersObj[name].name, headersObj[name].value)
@@ -27931,6 +27965,10 @@ ClientRequest.prototype._connect = function () {
 		return
 
 	self._response = new IncomingMessage(self._xhr, self._fetchResponse, self._mode)
+	self._response.on('error', function(err) {
+		self.emit('error', err)
+	})
+
 	self.emit('response', self._response)
 }
 
@@ -28050,6 +28088,8 @@ var IncomingMessage = exports.IncomingMessage = function (xhr, response, mode) {
 				}
 				self.push(new Buffer(result.value))
 				read()
+			}).catch(function(err) {
+				self.emit('error', err)
 			})
 		}
 		read()

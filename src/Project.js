@@ -230,10 +230,7 @@ export default class Project extends SkyGridObject {
 	 * @param  {Boolean} [fetch]		Determines whether the full user object should be fetched, or just the description.  Defaults to true.
 	 * @returns {Promise<User[], SkyGridError>} A promise that resolves to an array of all users that were found.
 	 */
-	users(constraints, fetch) {
-		if (fetch === undefined) {
-			fetch = true;
-		}
+	users(constraints, fetch = true) {
 		return this._api.request('findUsers', {
 			constraints: constraints,
 			fetch: fetch
@@ -250,10 +247,7 @@ export default class Project extends SkyGridObject {
 	 * @param {object} properties 	properties of this schema (Defaults to true)
 	 * @returns {Promise<Schema, SkyGridError>} a promise that resolves to a schema if the add succeeded
 	 */
-	addSchema(name,properties) {
-		if (properties === undefined) {
-			properties = {};
-		}
+	addSchema(name, properties = {}) {
 		return this._api.request('addDeviceSchema', { name:name, properties:properties }).then(schema => {
 			return this.schema(schema.id).fetch();
 		});
@@ -274,10 +268,7 @@ export default class Project extends SkyGridObject {
 	 * @param  {Boolean} [fetch]		Determines whether the full schema object should be fetched, or just the description.  Defaults to true.
 	 * @returns {Promise<Schema[], SkyGridError>} A promise that resolves to an array of all schemas that were found.
 	 */
-	schemas(constraints, fetch) {
-		if (fetch === undefined) {
-			fetch = true;
-		}
+	schemas(constraints, fetch = true) {
 		return this._api.request('findDeviceSchemas', {
 			constraints: constraints,
 			fetch: fetch
@@ -291,7 +282,7 @@ export default class Project extends SkyGridObject {
 	/**
 	 * [addDevice description]
 	 * @param {string} name	name ofthe device
-	 * @param {object} schema either the schema id or the schema object to be used with this new device 
+	 * @param {object} schema either the schema id or the schema object to be used with this new device
 	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
@@ -327,10 +318,7 @@ export default class Project extends SkyGridObject {
 	 * @param  {Boolean} [fetch]		Determines whether the full device object should be fetched, or just the description.  Defaults to true.
 	 * @returns {Promise<Device[], SkyGridError>} A promise that resolves to an array of all devices that were found.
 	 */
-	devices(constraints, fetch) {
-		if (fetch === undefined) {
-			fetch = true;
-		}
+	devices(constraints, fetch = true) {
 		return this._api.request('findDevices', {
 			constraints: constraints,
 			fetch: fetch
