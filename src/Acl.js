@@ -32,7 +32,7 @@ export default class Acl {
 		return this._permissionsById;
 	}
 
-	isEmpty() {
+	get isEmpty() {
 		return Util.objectEmpty(this._permissionsById);
 	}
 

@@ -28,6 +28,10 @@ function parseSettings(settings) {
 		}
 	}
 
+	if (settings.api === 'websocket' && !Util.hasWebSocketsupport()) {
+		settings.api = 'rest';
+	}
+
 	return settings;
 }
 
@@ -44,14 +48,14 @@ export default class Project extends SkyGridObject {
 	 */
 	constructor(projectId, settings) {
 		super();
-		
+
 		settings = parseSettings(settings);
 
 		switch (settings.api) {
-			case 'rest': 
+			case 'rest':
 				this._api = new RestApi(settings.address, projectId);
 				break;
-			case 'socketio': 
+			case 'socketio':
 				this._api = new SocketIoApi(settings.address, projectId);
 				break;
 			default:
@@ -65,9 +69,10 @@ export default class Project extends SkyGridObject {
 		this._subCallbacks = {};
 		this._subCount = 0;
 		this._serverSubId = null;
+		this._user = null;
 
 		this._data = { id: projectId };
-		
+
 		this._setupListeners();
 
 		this._timeInterval = setInterval(() => { this.fetchServerTime(); }, 30000);
@@ -82,7 +87,7 @@ export default class Project extends SkyGridObject {
 		return this._getDataProperty('name');
 	}
 
-	/** 
+	/**
 	 * Gets a value that determines whether this project allows users to sign up.
 	 * @return {boolean} A value that determines whether users can sign up.
 	 */
@@ -93,7 +98,7 @@ export default class Project extends SkyGridObject {
 	/**
 	 * Sets a value that determines whether this project allows users to sign up.
 	 * @param  {boolean} 	value 	A value that determines whether users can sign up.
-	 * @return {void} 	
+	 * @return {void}
 	 */
 	set allowSignup(value) {
 		this._setDataProperty('allowSignup', value);
@@ -171,8 +176,8 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<void, SkyGridError>} 	A promise that resolves once the user has been logged in.
 	 */
 	login(email, password) {
-		return this._api.request('login', { 
-			email: email, 
+		return this._api.request('login', {
+			email: email,
 			password: password
 		}).then(userData => {
 			this._user = {
@@ -201,12 +206,12 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<User, SkyGridError>} A promise that resolves to the created User's id.
 	 */
 	signup(email, password, meta) {
-		return this._api.request('signup', { 
-			email: email, 
+		return this._api.request('signup', {
+			email: email,
 			password: password,
 			meta: meta
 		}).then(data => {
-			return data.id
+			return data.id;
 		});
 	}
 
@@ -226,7 +231,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<User[], SkyGridError>} A promise that resolves to an array of all users that were found.
 	 */
 	users(constraints, fetch = true) {
-		return this._api.request('findUsers', { 
+		return this._api.request('findUsers', {
 			constraints: constraints,
 			fetch: fetch
 		}).then(users => {
@@ -240,9 +245,10 @@ export default class Project extends SkyGridObject {
 	 * Adds a Schema to the associated project
 	 * @param {string} name			name of the schema
 	 * @param {object} properties 	properties of this schema (Defaults to true)
+	 * @returns {Promise<Schema, SkyGridError>} a promise that resolves to a schema if the add succeeded
 	 */
-	addSchema(name,properties = {}) {
-		return this._api.request('addDeviceSchema', {name:name,properties:properties}).then(schema => {
+	addSchema(name, properties = {}) {
+		return this._api.request('addDeviceSchema', { name:name, properties:properties }).then(schema => {
 			return this.schema(schema.id).fetch();
 		});
 	}
@@ -263,7 +269,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Schema[], SkyGridError>} A promise that resolves to an array of all schemas that were found.
 	 */
 	schemas(constraints, fetch = true) {
-		return this._api.request('findDeviceSchemas', { 
+		return this._api.request('findDeviceSchemas', {
 			constraints: constraints,
 			fetch: fetch
 		}).then(schemas => {
@@ -276,20 +282,21 @@ export default class Project extends SkyGridObject {
 	/**
 	 * [addDevice description]
 	 * @param {string} name	name ofthe device
-	 * @param {string, object} 
+	 * @param {object} schema either the schema id or the schema object to be used with this new device
 	 * @returns {Promise<Device, SkyGridError>} [description]
 	 * @private
 	 */
 	addDevice(name, schema) {
-		if (typeof schema === 'object' && typeof schema.id === 'string')
+		if (typeof schema === 'object' && typeof schema.id === 'string') {
 			schema = schema.id;
-			
+		}
+
 		if (typeof schema === 'string') {
-			return this._api.request('addDevice', {name:name, schemaId:schema}).then(device => {
+			return this._api.request('addDevice', { name:name, schemaId:schema }).then(device => {
 				return this.device(device.id).fetch();
 			});
 		} else {
-			throw new SkyGridError('invalid schema')
+			throw new SkyGridError('invalid schema');
 		}
 	}
 
@@ -312,7 +319,7 @@ export default class Project extends SkyGridObject {
 	 * @returns {Promise<Device[], SkyGridError>} A promise that resolves to an array of all devices that were found.
 	 */
 	devices(constraints, fetch = true) {
-		return this._api.request('findDevices', { 
+		return this._api.request('findDevices', {
 			constraints: constraints,
 			fetch: fetch
 		}).then(devices => {
@@ -334,8 +341,8 @@ export default class Project extends SkyGridObject {
 	 * });
 	 */
 	fetch() {
-		return this._fetch('fetchProject', { 
-			projectId: this.id 
+		return this._fetch('fetchProject', {
+			projectId: this.id
 		});
 	}
 
@@ -360,7 +367,7 @@ export default class Project extends SkyGridObject {
 
 	/**
 	 * Subscribes to all changes made to devices belonging to this project via the SkyGrid back end.
-	 *   
+	 *
 	 * NOTE: Subscribing is currently only available when using socket based communication methods.
 	 *
 	 * @param {object} 		[settings] 	Optional additional settings that determine how the subscription is handled (currently unused).
@@ -386,7 +393,7 @@ export default class Project extends SkyGridObject {
 			if (this._serverSubId === null) {
 				return this._subManager.addSubscription({
 					projectId: this.id
-				}, 
+				},
 				(changes, device) => {
 					for (const key in this._subCallbacks) {
 						const subCallback = this._subCallbacks[key];
@@ -406,7 +413,7 @@ export default class Project extends SkyGridObject {
 	/**
 	 * Unsubscribes the specified ID or callback from this project.
 	 * If no ID or callback is specified, all subscriptions are removed.
-	 * @param  {number|function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe() 
+	 * @param  {number|function} [id] The unique ID returned by subscribe(), or the callback passed to subscribe()
 	 * @return {Promise} A promise that resolves once the subscription has been removed.
 	 */
 	unsubscribe(id) {
@@ -420,7 +427,7 @@ export default class Project extends SkyGridObject {
 
 			if (this._subCallbacks[id] === undefined) {
 				throw new SkyGridError('Subscription does not exist');
-			} 
+			}
 
 			delete this._subCallbacks[id];
 		} else {
@@ -466,6 +473,8 @@ export default class Project extends SkyGridObject {
 			this._projectId = null;
 			this._user = null;
 			this._timeInterval = null;
+			this._data = null;
+			this._changes = null;
 		});
 	}
 

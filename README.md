@@ -85,7 +85,7 @@ device.subscribe();
 
 We can also pass a function to subscribe() that will get called every time an event is received.
 ```javascript
-function logChanges(device, changes) {
+function logChanges(changes, device) {
 	changes.map(function(change) {
 		console.log(change + ': ' + device.get(change));
 	});

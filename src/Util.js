@@ -100,3 +100,7 @@ export function fixDataDates(data) {
 		data.updatedAt = new Date(data.updatedAt);
 	}
 }
+
+export function hasWebSocketSupport() {
+	return 'WebSocket' in window && window.WebSocket.CLOSING === 2;
+}
