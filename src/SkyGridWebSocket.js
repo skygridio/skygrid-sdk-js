@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter2';
+import EventEmitter from './EventEmitter';
 
 export default class SkyGridWebSocket extends EventEmitter {
 	constructor(address) {
@@ -56,6 +56,13 @@ export default class SkyGridWebSocket extends EventEmitter {
 		return this._handleSend(message);
 	}
 
+	close() {
+		this._requestQueue = [];
+
+		this._reconnect = false;
+		this._socket.close();
+	}
+
 	_queueMessage(message) {
 		return new Promise((resolve, reject) => {
 			this._requestQueue.push(() => {
@@ -73,12 +80,5 @@ export default class SkyGridWebSocket extends EventEmitter {
 	 			resolve(response);
 			};
 	 	});
-	}
-
-	close() {
-		this._requestQueue = [];
-
-		this._reconnect = false;
-		this._socket.close();
 	}
 }

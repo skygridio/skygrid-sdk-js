@@ -50,6 +50,7 @@ gulp.task('browserify', ['compile'], () => {
 		entries: 'lib/Browser.js',
 	})
 	.transform(envify({
+		_: 'purge',
 		SKYGRID_SERVER_ADDRESS: addressEnv
 	}))
 	.bundle();

@@ -1,6 +1,7 @@
+require('isomorphic-fetch');
+
 import Api from './Api';
 import SkyGridError from './SkyGridError';
-import fetch from 'node-fetch'
 
 function checkStatus(response) {
 	if (response.status >= 200 && response.status < 300) {
