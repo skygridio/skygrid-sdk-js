@@ -142,6 +142,10 @@ export default class RestApi extends Api {
 				return this._fetchJson(`/history/${data.deviceId}`, { method: 'get' });
 			},
 
+			fetchAggregate: data => {
+				return this._fetchJson(`/history/${data.deviceId}/${data.property}/?aggregation=${data.aggregation}`, { method: 'get' });
+			},
+
 			getServerTime: () => {
 				return this._fetchJson('/time', { method: 'get' });
 			}
