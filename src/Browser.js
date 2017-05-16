@@ -1,3 +1,5 @@
+require('es6-promise');
+
 import SkyGrid from './SkyGrid';
 import SkyGridError from './SkyGridError';
 import Acl from './Acl';
