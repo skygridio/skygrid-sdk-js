@@ -295,6 +295,49 @@ export default class Device extends SkyGridObject {
 	}
 
 	/**
+	 * Retreives the aggregated history of a property of this device.  Each history record stores the entire
+	 * state of the device at the time it is logged.
+	 * 
+	 * NOTE: The 'log' attribute on this device must be set to true, and the 'aggregate' property must be set
+	 * to true on the property, to start logging aggregates.
+	 * 
+	 * @param  {String} [property] The property to retrieve the aggregate values
+	 * @param  {String} [period] The aggregation type (hourly, daily, monthly)
+	 * @returns {Promise<object[], SkyGridError>} A promise that resolves to an array of records found within the given constraints. 
+	 */
+	aggregate(property, period) {
+		const validPeriods = ['hourly', 'daily', 'monthly'];
+		const isValidPeriod = p => validPeriods.indexOf(p) > -1;
+
+		if (!period) {
+			period = validPeriods[0];
+		}
+
+		if (!isValidPeriod(period)) {
+			throw new SkyGridError('Invalid aggregate period. Valid: ' + validPeriods);
+		}
+
+		// check property is valid
+		if (!this.propertyExists(property)) {
+			throw new SkyGridError('Property does not exist');
+		}
+
+		const data = {
+			deviceId: this.id,
+			property: property,
+			aggregation: period
+		};
+
+		return this._api.request('fetchAggregate', data).then(res => {
+			res.map(item => { 
+				item.start = new Date(item.start);
+				item.end = new Date(item.end);
+			});
+			return res;
+		});
+	}
+
+	/**
 	 * Removes this device from the SkyGrid server.
 	 * 
 	 * NOTE: This is permanent and cannot be reversed so use with caution!
